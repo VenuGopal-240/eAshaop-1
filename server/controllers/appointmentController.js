@@ -770,16 +770,12 @@ const appointment = await Appointment.findById(appointmentId)
   }
 };
 
-// ------------------------ Razorpay Webhook ------------------------
-// ------------------------ Razorpay Webhook ------------------------
 exports.razorpayWebhook = async (req, res) => {
   try {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
-    // Express.raw parser ensures req.body is a Buffer
     const rawBody = req.body;
 
-    // Verify signature
     const shasum = crypto.createHmac("sha256", secret);
     shasum.update(rawBody);
     console.log("shasum", shasum)
@@ -793,12 +789,10 @@ exports.razorpayWebhook = async (req, res) => {
       return res.status(400).json({ message: "Invalid signature" });
     }
 
-    // Parse JSON AFTER verifying signature
     const webhookData = JSON.parse(rawBody);
     const event = webhookData.event;
     console.log("🔔 Webhook Event:", event);
 
-    // Only handle payment.captured to confirm appointments
     if (event === "payment.captured") {
       const paymentEntity = webhookData.payload.payment.entity;
 
@@ -806,17 +800,16 @@ exports.razorpayWebhook = async (req, res) => {
         razorpayOrderId: paymentEntity.order_id,
       });
 
-      if (!appointment) {
-        console.log("⚠️ Appointment not found for order:", paymentEntity.order_id);
-        return res.json({ status: "ok" }); // still return 200 to Razorpay
+       if (!appointment) {``
+        console.log("Appointment not found for order:", paymentEntity.order_id);
+        return res.json({ status: "ok" });
       }
 
       if (appointment.status === "booked") {
-        console.log("⚠️ Appointment already booked:", appointment._id);
-        return res.send(req).json({ status: "ok" }); // avoid duplicate processing
+        console.log("Appointment already booked:", appointment._id);
+        return res.send(req).json({ status: "ok" });
       }
 
-      // Update appointment
       appointment.status = "booked";
       appointment.razorpayPaymentId = paymentEntity.id;
       await appointment.save();
@@ -837,7 +830,6 @@ exports.razorpayWebhook = async (req, res) => {
         },
       });
 
-      // Emit real-time notifications
       emitNotification(appointment.userId, {
         message: "You have a new notification! Please check.",
         notification: userNotif,
@@ -850,7 +842,6 @@ exports.razorpayWebhook = async (req, res) => {
 
 
 
-      // Subdocument to push to User & Doctor
       const subDoc = {
         appointmentId: appointment._id,
         userId: appointment.userId,
@@ -874,7 +865,6 @@ exports.razorpayWebhook = async (req, res) => {
       console.log("Appointment confirmed via Webhook:", appointment._id);
     }
 
-    // Respond quickly to Razorpay (must be within 5 seconds)
     res.json({ status: "ok" });
   } catch (err) {
     console.error("Webhook Error:", err);
@@ -898,34 +888,55 @@ exports.bookAppointment = async (req, res) => {
     const doctor = await Doctor.findById(doctorId);
     if (!doctor) return res.status(404).json({ message: "Doctor not found" });
 
-    const requestedDateIST = moment.utc(date).tz("Asia/Kolkata");
-    const startOfDay = moment(requestedDateIST).startOf("day").toDate();
-    const endOfDay = moment(requestedDateIST).endOf("day").toDate();
-    const requestedTimeIST = moment.tz(`${requestedDateIST.format("YYYY-MM-DD")} ${time}`, "YYYY-MM-DD HH:mm", "Asia/Kolkata");
+     const requestedDateIST = moment.tz(date, "YYYY-MM-DD", "Asia/Kolkata");
+
+    const startOfDay = requestedDateIST.clone().startOf("day").toDate();
+    const endOfDay = requestedDateIST.clone().endOf("day").toDate();
+
+    const requestedTimeIST = moment.tz(
+      `${requestedDateIST.format("YYYY-MM-DD")} ${time}`,
+      "YYYY-MM-DD HH:mm",
+      "Asia/Kolkata"
+    );
+
     const now = moment().tz("Asia/Kolkata");
 
-    if (requestedTimeIST.isBefore(now))
+    if (requestedTimeIST.isBefore(now)) {
       return res.status(400).json({ message: "Cannot book an appointment in the past" });
+    }
 
     const availabilities = await DoctorAvailability.find({
       doctor: doctorId,
-      date: { $gte: requestedTimeIST}
+      date: { $gte: startOfDay, $lte: endOfDay }
     });
 
     if (!availabilities.length)
       return res.status(400).json({ message: "Doctor is not available on this date" });
 
-    const matchingSlot = availabilities.find((availability) => {
-      const [startHour, startMinute] = availability.startTime.split(":");
-      const [endHour, endMinute] = availability.endTime.split(":");
-      const slotStart = moment(requestedDateIST).hour(startHour).minute(startMinute);
-      const slotEnd = moment(requestedDateIST).hour(endHour).minute(endMinute);
-      if (slotEnd.isBefore(slotStart)) slotEnd.add(1, "day");
-      return requestedTimeIST.isBetween(slotStart, slotEnd, null, "[)");
+    let matchingSlot = null;
+
+    availabilities.forEach((availability) => {
+      const slotStart = moment.tz(
+        `${requestedDateIST.format("YYYY-MM-DD")} ${availability.startTime}`,
+        "YYYY-MM-DD HH:mm",
+        "Asia/Kolkata"
+      );
+
+      const slotEnd = moment.tz(
+        `${requestedDateIST.format("YYYY-MM-DD")} ${availability.endTime}`,
+        "YYYY-MM-DD HH:mm",
+        "Asia/Kolkata"
+      );
+
+      if (slotEnd.isBefore(slotStart)) slotEnd.add(1, "day"); 
+
+      if (requestedTimeIST.isBetween(slotStart, slotEnd, null, "[)")) {
+        matchingSlot = availability;
+      }
     });
 
     if (!matchingSlot)
-      return res.status(400).json({ message: "Doctor is not available for this slot" });
+      return res.status(400).json({ message: "Doctor is not available for this time slot" });
 
     const order = await razorpay.orders.create({
       amount: amount * 100,
@@ -950,11 +961,14 @@ exports.bookAppointment = async (req, res) => {
       order,
       appointmentId: appointment._id
     });
+
   } catch (error) {
     console.error("Book Appointment Error:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
+
 
 
 

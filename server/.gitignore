@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 package-lock.json
 .env
+insert1000Users.js
+insert100Doctor.js
 dist
 dist-ssr
 *.local
