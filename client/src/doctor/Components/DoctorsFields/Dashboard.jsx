@@ -388,7 +388,11 @@ const Dashboard = () => {
 
     const fetchBookings = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/appointments/doctor/${doctorId}`);
+        const res = await axios.get(`${API_BASE_URL}/api/appointments/doctor/${doctorId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          }
+        });
         const { upcoming = [], past = [] } = res.data;
 
         setBookings(upcoming);
@@ -436,7 +440,7 @@ const Dashboard = () => {
 
   return (
     // <div className="overflow-y-hidden">
-       <div className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-hidden">
       <div className="ml-0 md:pl-[80px] lg:pl-[260px] xl:pl-[327px] mt-[75px] px-4 sm:px-6 font-urbanist">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-3">
@@ -444,43 +448,43 @@ const Dashboard = () => {
         </div>
 
         {/* Toggle + Call */}
-          <div className="mt-3 flex items-center gap-x-3 sm:gap-x-5">
-    {/* Status Toggle Content */}
-    <div className="flex items-center gap-x-2 sm:gap-x-3">
-        <span className="text-sm font-medium">Status:</span>
-        {/* Toggle is smaller on mobile */}
-        <label className="relative inline-block w-10 h-5 sm:w-12 sm:h-6">
-            <input
+        <div className="mt-3 flex items-center gap-x-3 sm:gap-x-5">
+          {/* Status Toggle Content */}
+          <div className="flex items-center gap-x-2 sm:gap-x-3">
+            <span className="text-sm font-medium">Status:</span>
+            {/* Toggle is smaller on mobile */}
+            <label className="relative inline-block w-10 h-5 sm:w-12 sm:h-6">
+              <input
                 type="checkbox"
                 checked={isActive}
                 onChange={() => setIsActive(!isActive)}
                 className="sr-only peer"
-            />
-            <div className="w-full h-full rounded-full bg-gray-300 transition-colors duration-300 peer-checked:bg-[#00A99D]" />
-            <div 
+              />
+              <div className="w-full h-full rounded-full bg-gray-300 transition-colors duration-300 peer-checked:bg-[#00A99D]" />
+              <div
                 className="absolute left-0.5 top-0.5 w-4 h-4 sm:left-1 sm:top-1 sm:w-4 sm:h-4 bg-white rounded-full shadow transition-transform duration-300 
-                           peer-checked:translate-x-[18px] sm:peer-checked:translate-x-6" 
-            />
-        </label>
-        {/* Text container is narrower on mobile */}
-        <span className="text-sm font-medium w-14 sm:w-16">{isActive ? "Active" : "Inactive"}</span>
-    </div>
+                           peer-checked:translate-x-[18px] sm:peer-checked:translate-x-6"
+              />
+            </label>
+            {/* Text container is narrower on mobile */}
+            <span className="text-sm font-medium w-14 sm:w-16">{isActive ? "Active" : "Inactive"}</span>
+          </div>
 
-    {/* Join Call Button Content */}
-    <a
-        href="https://meet.jit.si/d6b3a8a3-128c-4f61-baef-f22e2713db51"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="
+          {/* Join Call Button Content */}
+          <a
+            href="https://meet.jit.si/d6b3a8a3-128c-4f61-baef-f22e2713db51"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="
             bg-[#00A99D] text-white rounded-lg font-medium whitespace-nowrap
             text-sm px-3 py-1.5
             sm:px-4 sm:py-2
         "
-        style={{ textDecoration: "none" }}
-    >
-        Join Call
-    </a>
-</div>
+            style={{ textDecoration: "none" }}
+          >
+            Join Call
+          </a>
+        </div>
 
         {/* Layout */}
         <div className="flex flex-col xl:flex-row gap-6 mt-6">

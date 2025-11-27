@@ -414,7 +414,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ReportsPage from './ReportsPage';
 
 function normalizeReviewToComment(review) {
-    console.log(review);
+  // safe extraction of avatar
   const avatar =
     review?.user?.profileImage?.cloudinaryUrl ||
     review?.user?.profileImage ||
@@ -437,7 +437,7 @@ function normalizeReviewToComment(review) {
   };
 }
 
-function CommentSection({ doctorId, userId }) {
+function CommentSection({ doctorId, userId, role = "user" }) {
 
   const storedUser = JSON.parse(localStorage.getItem("user"));
   const currentUser = {
@@ -454,8 +454,16 @@ function CommentSection({ doctorId, userId }) {
   useEffect(() => {
     if (!doctorId) return;
     setLoading(true);
-
-    fetch(`${API_BASE_URL}/api/reviews?doctorId=${doctorId}`)
+    let authToken = localStorage.getItem("authToken");
+    fetch(`${API_BASE_URL}/api/reviews?doctorId=${doctorId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authToken}`
+        }
+      }
+    )
       .then((res) => res.json())
       .then((payload) => {
         const reviews = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
@@ -486,8 +494,11 @@ function CommentSection({ doctorId, userId }) {
   const handleAddComment = async (e) => {
     e?.preventDefault?.();
 
-    if (ratingValue === 0 && newCommentText.trim() === '') {
-      toast.error('Please add a comment or select a rating before posting.');
+    let authToken = localStorage.getItem("authToken");
+    console.log("Auth Token:", authToken);
+
+    if (!ratingValue && !newCommentText.trim()) {
+      toast.error('Please add a comment and select a rating before posting.');
       return;
     }
 
@@ -517,7 +528,7 @@ function CommentSection({ doctorId, userId }) {
     try {
       const res = await fetch(`${API_BASE_URL}/api/reviews`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', "Authorization": `Bearer ${authToken}`, },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
@@ -538,7 +549,8 @@ function CommentSection({ doctorId, userId }) {
   };
 
   const handleAddReply = async (commentId, replyText, user) => {
-    console.log(replyText);
+    let authToken = localStorage.getItem("authToken");
+    console.log("Auth Token:", authToken);
     const payload = {
       doctorId,
       userId,
@@ -548,7 +560,10 @@ function CommentSection({ doctorId, userId }) {
     try {
       const res = await fetch(`${API_BASE_URL}/api/comments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          "Authorization": `Bearer ${authToken}`,
+        },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
@@ -587,17 +602,19 @@ function CommentSection({ doctorId, userId }) {
   };
 
   const handleToggleLike = async (commentId, name) => {
+    let authToken = localStorage.getItem("authToken");
 
     const payload = {
       "commentId": commentId?.id,
       "userId": commentId?.raw?.user?._id,
     };
-    
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/comments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', "Authorization": `Bearer ${authToken}`, },
         body: JSON.stringify(payload),
+
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to post review');
@@ -664,6 +681,7 @@ function CommentSection({ doctorId, userId }) {
 
   return (
     <>
+
       <Box
         component="form"
         onSubmit={handleAddComment}
@@ -678,30 +696,36 @@ function CommentSection({ doctorId, userId }) {
           backgroundColor: '#fff',
         }}
       >
-        <Rating
-          name="text-feedback"
-          value={ratingValue}
-          precision={0.5}
-          icon={<StarIcon sx={{ fontSize: 40 }} />}
-          emptyIcon={<StarIcon sx={{ opacity: 0.3, fontSize: 40 }} />}
-          onChange={(event, newValue) => setRatingValue(newValue)}
-        />
-
-        <Paper elevation={2} sx={{ p: 2, mt: 1, width: '100%' }}>
-          <TextField
-            fullWidth
-            multiline
-            rows={2}
-            placeholder="Write a comment..."
-            value={newCommentText}
-            onChange={(e) => setNewCommentText(e.target.value)}
-            variant="outlined"
-            sx={{ mb: 1 }}
+        {role === "user" &&
+          <Rating
+            name="text-feedback"
+            value={ratingValue}
+            precision={0.5}
+            icon={<StarIcon sx={{ fontSize: 40 }} />}
+            emptyIcon={<StarIcon sx={{ opacity: 0.3, fontSize: 40 }} />}
+            onChange={(event, newValue) => setRatingValue(newValue)}
           />
-          <Button type="submit" variant="contained" fullWidth sx={{ backgroundColor: 'rgb(0, 169, 157)' }}>
-            Post Comment / Rating
-          </Button>
-        </Paper>
+        }
+
+        {role === "user" &&
+
+          <Paper elevation={2} sx={{ p: 2, mt: 1, width: '100%' }}>
+            <TextField
+              fullWidth
+              multiline
+              rows={2}
+              placeholder="Write a comment..."
+              value={newCommentText}
+              onChange={(e) => setNewCommentText(e.target.value)}
+              variant="outlined"
+              sx={{ mb: 1 }}
+            />
+            <Button type="submit" variant="contained" fullWidth sx={{ backgroundColor: 'rgb(0, 169, 157)' }}>
+              Post Comment / Rating
+            </Button>
+
+          </Paper>
+        }
 
         <Box sx={{ width: '100%', mt: 2 }}>
           {loading && <Typography variant="body2">Loading comments...</Typography>}
@@ -717,6 +741,7 @@ function CommentSection({ doctorId, userId }) {
               onToggleDislike={handleToggleDislike}
               onToggleLikeReply={handleToggleLikeReply}
               onToggleDislikeReply={handleToggleDislikeReply}
+              role={role}
             // onToggleReply={handleReply}
             />
           ))}
@@ -732,7 +757,7 @@ function CommentSection({ doctorId, userId }) {
   );
 }
 
-function CommentItem({ comment, currentUser, onEdit, onReply, onToggleLike, onToggleDislike, onToggleLikeReply, onToggleDislikeReply, onToggleReply }) {
+function CommentItem({ comment, currentUser, onEdit, onReply, onToggleLike, onToggleDislike, onToggleLikeReply, onToggleDislikeReply, onToggleReply, role }) {
   const [editingText, setEditingText] = useState(comment.text);
   const [showEditInput, setShowEditInput] = useState(false);
   const [replyText, setReplyText] = useState('');
@@ -756,13 +781,21 @@ function CommentItem({ comment, currentUser, onEdit, onReply, onToggleLike, onTo
     setShowEditInput(!showEditInput);
     setEditingText(comment.text);
   };
-  console.log(openReview);
+  // console.log(openReview);
   const handleReply = async (a) => {
     setOpenReview((q) => !q);
+    let authToken = localStorage.getItem("authToken");
     if (!openReview) {
 
       try {
-        const res = await fetch(`${API_BASE_URL}/api/reviews/${a}/comments`);
+        const res = await fetch(`${API_BASE_URL}/api/reviews/${a}/comments`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${authToken}`
+          }
+
+        });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Failed to post review');
         console.log(data?.data);
@@ -775,19 +808,30 @@ function CommentItem({ comment, currentUser, onEdit, onReply, onToggleLike, onTo
     }
 
   }
+
   const openViews = async (a) => {
-    setOpenReview(true);
-    console.log("HI");
+    let authToken = localStorage.getItem("authToken");
+
     try {
-      const res = await fetch(`${API_BASE_URL}/api/reviews/${a}/comments`);
+      const res = await fetch(`${API_BASE_URL}/api/reviews/${a}/comments`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${authToken}`
+          }
+        }
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to post review');
-      console.log(data?.data);
+      // console.log(data?.data);
       setRepleyedComments(data?.data);
-      // toast.success(data.message || 'Review posted');
+
+      toast.success(data.message || 'Review posted');
     } catch (err) {
-      // toast.error(err.message || 'Failed to post review');
+      toast.error(err.message || 'Failed to post review');
     }
+    setOpenReview(true);
   }
 
   const [anchorEl, setAnchorEl] = useState(null);
@@ -802,6 +846,12 @@ function CommentItem({ comment, currentUser, onEdit, onReply, onToggleLike, onTo
     setAnchorEl(null);
     setOpenReport(false);
   };
+
+  const handleDeleteComment = (com) => {
+    console.log("Delete Comment", com);
+    handleClose();
+  }
+
   return (
     <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
@@ -813,7 +863,16 @@ function CommentItem({ comment, currentUser, onEdit, onReply, onToggleLike, onTo
               <Typography>{comment.username}</Typography>
               <Typography variant="caption" color="text.secondary">{comment.timestamp}</Typography>
             </Box>
-
+            {/* <Box>
+              <Rating
+                name="text-feedback"
+                value={comment.rating}
+                precision={0.5}
+                icon={<StarIcon sx={{ fontSize: 20 }} />}
+                emptyIcon={<StarIcon sx={{ opacity: 0.3, fontSize: 20 }} />}
+                // onChange={(event, newValue) => setRatingValue(newValue)}
+              />
+            </Box> */}
             <Box sx={{ display: "flex", alignItems: "center", paddingTop: "0" }}>
               <IconButton size="small" onClick={() => onToggleLike(comment, "like")}>
                 {comment.liked ? (
@@ -846,6 +905,7 @@ function CommentItem({ comment, currentUser, onEdit, onReply, onToggleLike, onTo
               transformOrigin={{ vertical: "top", horizontal: "right" }}
             >
               <MenuItem onClick={() => setOpenReport(true)}>Report</MenuItem>
+              {role === 'doctor' && <MenuItem onClick={()=>handleDeleteComment(comment)} >Delete</MenuItem>}
             </Menu>
 
             {reportOpen && (
@@ -854,6 +914,7 @@ function CommentItem({ comment, currentUser, onEdit, onReply, onToggleLike, onTo
                 setOpenReport={setOpenReport}
                 comment={comment}
                 setAnchorEl={setAnchorEl}
+
               />
             )}
           </Box>
@@ -930,7 +991,7 @@ function CommentItem({ comment, currentUser, onEdit, onReply, onToggleLike, onTo
                 onReply(comment.id, replyComment, currentUser);
                 setReplyText('');
                 setShowReplyInput(false);
-                openViews(comment.id);
+                // openViews(comment.id);
               }
             }}
           >

@@ -120,7 +120,10 @@ const ConfirmAppointment = () => {
       // 1️⃣ Create appointment + Razorpay order
       const bookRes = await fetch(`${API_BASE_URL}/api/appointments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          'authorization': `Bearer ${localStorage.getItem("authToken")}`
+        },
         body: JSON.stringify({
           userId,
           doctorId: doctor._id,
@@ -161,7 +164,10 @@ const ConfirmAppointment = () => {
             `${API_BASE_URL}/api/appointments/confirm-payment`,
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                'authorization': `Bearer ${localStorage.getItem("authToken")}`
+              },
               body: JSON.stringify({
                 appointmentId,
                 razorpayPaymentId: response.razorpay_payment_id,
@@ -231,7 +237,7 @@ const ConfirmAppointment = () => {
             <Button
               variant="link"
               className="d-flex align-items-center mb-3 p-0"
-              style={{ color: "#00A99D", fontWeight: 500, fontSize: 18 ,textDecoration:"none"}}
+              style={{ color: "#00A99D", fontWeight: 500, fontSize: 18, textDecoration: "none" }}
               onClick={() => navigate(-1)}
             >
               <img
@@ -256,7 +262,7 @@ const ConfirmAppointment = () => {
                 }}
               />
               <img
-                src={doctor?.profileImage }
+                src={doctor?.profileImage}
                 alt={doctor?.name}
                 style={{
                   height: "120px",
@@ -368,8 +374,8 @@ const ConfirmAppointment = () => {
           sm={10}
           md={6}
           className="d-flex justify-content-center col-right"
-          style={{ padding: "0 15px",marginBottom:'20px' }}
-          
+          style={{ padding: "0 15px", marginBottom: '20px' }}
+
         >
           <div style={{ width: "100%", maxWidth: 410 }}>
             <h4 className="fw-medium mb-2 mt-2">Payment Details</h4>

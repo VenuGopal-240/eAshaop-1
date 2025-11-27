@@ -15,6 +15,7 @@ import doctor from "../../assets/icons/doctor.svg";
 import styles from "../../components/Doctor Specialist/DashBoard.module.css";
 import { toast } from "react-toastify";
 import { API_BASE_URL } from "../../../api-config";
+import { getCatagories } from "../../../Util/apiRequest";
 
 
 const staticCategories = [
@@ -39,9 +40,9 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/categories`);
-        const backendCategories = await res.json();
-
+        // const res = await fetch(`${API_BASE_URL}/api/categories`);
+        // const backendCategories = await res.json();
+        const backendCategories = await getCatagories()
         // 🔹 Merge backend data into static categories
         const merged = staticCategories.map((cat) => {
           const backendCat = backendCategories.find((b) => b.uuid === cat.uuid);

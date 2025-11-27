@@ -17,6 +17,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Radio from '@mui/material/Radio';
 import ReviewForm from "./ReviewForm";
 import CommentSection from "./CommentSection";
+import { addDependent, doctorAvailability, getDoctorDetails, userDetails } from "../../../Util/apiRequest";
 
 
 export default function AppointmentPage() {
@@ -39,15 +40,16 @@ export default function AppointmentPage() {
   const location = useLocation();
   const { doctorId, consultationType } = location.state || {};
 
-  console.log(doctorId, consultationType);
   // Fetch doctor
   useEffect(() => {
     setDoctor(location.state?.details);
     // if (!doctorId) return;
     const fetchDoctor = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/doctors/${doctorId}`);
-        setDoctor(res.data);
+        // const res = await axios.get(`${API_BASE_URL}/api/doctors/${doctorId}`);
+        const res = await getDoctorDetails(doctorId);
+        console.log("Doctor details:", res);
+        setDoctor(res);
       } catch (err) {
         console.error("Error fetching doctor:", err);
       }
@@ -61,11 +63,13 @@ export default function AppointmentPage() {
   const fetchSlots = async () => {
     try {
       const dateStr = startDate.toLocaleDateString("en-CA");
-      console.log(location?.state?.id,dateStr)
-      const res = await axios.get(
-        `${API_BASE_URL}/api/doctors/${location?.state?.id}/availability/${dateStr}`
-      );      
-      let slots = res.data.slots || [];
+      // console.log(doctorId, dateStr);
+      // const res = await axios.get(
+      //   `${API_BASE_URL}/api/doctors/${doctorId}/availability/${dateStr}`
+      // );
+      const res = await doctorAvailability(doctorId, dateStr)
+      console.log("Fetched slots:", res);
+      let slots = res.slots || [];
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
@@ -95,11 +99,12 @@ export default function AppointmentPage() {
     const fetchSlots = async () => {
       try {
         const dateStr = startDate.toLocaleDateString("en-CA");
-        console.log(doctorId, dateStr)
-        const res = await axios.get(
-          `${API_BASE_URL}/api/doctors/${doctorId}/availability/${dateStr}`
-        );
-        let slots = res.data.slots || [];
+        // console.log(doctorId, dateStr)
+        // const res = await axios.get(
+        //   `${API_BASE_URL}/api/doctors/${doctorId}/availability/${dateStr}`
+        // );
+        const res = await doctorAvailability(doctorId, dateStr)
+        let slots = res.slots || [];
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -144,8 +149,10 @@ export default function AppointmentPage() {
 
       try {
         // Call backend to fetch dependents
-        const res = await axios.get(`${API_BASE_URL}/api/user/${mainUser._id}`);
-        const dependents = (res.data.userDependent || []).map(dep => ({
+        // const res = await axios.get(`${API_BASE_URL}/api/user/${mainUser._id}`);
+        const res = await userDetails(mainUser._id);
+        console.log("Fetched user dependents:", res);
+        const dependents = (res.userDependent || []).map(dep => ({
           name: dep.full_name,
           age: Math.floor((Date.now() - new Date(dep.dob).getTime()) / 31557600000),
           sex: dep.gender,
@@ -201,8 +208,10 @@ export default function AppointmentPage() {
         pincode: memberData.pinCode,
       };
 
-      const res = await axios.post(`${API_BASE_URL}/api/user/dependent`, payload);
-      toast.success(res.data.message);
+      // const res = await axios.post(`${API_BASE_URL}/api/user/dependent`, payload);
+      const res = await addDependent(payload);
+      console.log("Add dependent response:", res);
+      toast.success(res.message);
 
       const age = Math.floor((Date.now() - dobDate.getTime()) / 31557600000);
 
@@ -232,10 +241,17 @@ export default function AppointmentPage() {
       console.log("Removing dependent:", dep);
 
       const res = await axios.post(
-        `${API_BASE_URL}/api/user/dependent`, // endpoint
-        { _id: dep._id },                     // body
-        { params: { removeDependent: true } } // query params
+        `${API_BASE_URL}/api/user/dependent`,      // endpoint
+        { _id: dep._id },                          // body
+        {
+          params: { removeDependent: true },       // query params
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,      // add your token
+            "Content-Type": "application/json"
+          }
+        }
       );
+
 
       // Update state
       setMembers((prev) => prev.filter((_, i) => i !== index));
@@ -272,6 +288,8 @@ export default function AppointmentPage() {
   }, [selectedSlot]);
 
   const selectedMember = members[selectedMemberIndex];
+
+  console.log(doctor)
 
 
 
@@ -431,7 +449,7 @@ export default function AppointmentPage() {
                 // padding: "20px",
                 marginTop: "30px",
                 overflowY: "auto",
-                height: "400px", 
+                height: "400px",
                 fontFamily: "Urbanist, sans-serif",
                 position: "relative",
               }}
@@ -440,7 +458,7 @@ export default function AppointmentPage() {
                 style={{
                   position: "sticky",
                   top: "0",
-                  backgroundColor: "#f9fafc", 
+                  backgroundColor: "#f9fafc",
                   textAlign: "center",
                   fontSize: "22px",
                   fontWeight: "700",
@@ -449,7 +467,7 @@ export default function AppointmentPage() {
                   letterSpacing: "0.5px",
                   // borderBottom: "2px solid #e0e0e0",
                   padding: "10px 0 8px 0",
-                  zIndex: 100, 
+                  zIndex: 100,
                 }}
               >
                 Overall Reviews & Comments

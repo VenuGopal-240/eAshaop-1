@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LoaderOverlay from "../../../commonComponents/FadeLoader";
 import ProfileImageCropper from "./ImageCrop";
+import { saveUserDetails, userDetails } from "../../../Util/apiRequest";
 
 function useIsMobileOrTablet() {
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(window.innerWidth < 1024);
@@ -59,9 +60,9 @@ export default function UserDetailsPanel() {
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (!storedUser?.id) return;
-
-    fetch(`${API_BASE_URL}/api/user/${storedUser.id}`)
-      .then((res) => res.json())
+    userDetails(storedUser.id)
+      // fetch(`${API_BASE_URL}/api/user/${storedUser.id}`)
+      //   .then((res) => res.json())
       .then((data) => {
         console.log("User data from API:", data.user);  // ✅ Add this
         console.log("DOB from backend:", data.user?.dob); // ✅ Add this
@@ -135,18 +136,13 @@ export default function UserDetailsPanel() {
         aadhaar_number: formData.aadhaar_number,
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/user/${storedUser.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-      if (response.ok) {
+      try {
+        await saveUserDetails(storedUser.id, payload);
         toast.success("Profile updated successfully!");
-      } else {
-        toast.error(result.message || "Update failed");
+      } catch (err) {
+        toast.error(err.data?.message || err.message || "Update failed");
       }
+
     } catch (error) {
       console.error("Update error:", error);
       toast.error("Something went wrong while updating profile.");
@@ -214,7 +210,7 @@ export default function UserDetailsPanel() {
           fontFamily: "Urbanist, sans-serif",
           paddingRight: "0px",
           // marginTop: "20px",
-          marginBottom:"30px"
+          marginBottom: "30px"
         }}
       >
         <Row className={`${styles.rowContainer}`}>
@@ -282,7 +278,7 @@ export default function UserDetailsPanel() {
               </div>
             )} */}
             {isMobileOrTablet && (
-              <ProfileImageCropper  />
+              <ProfileImageCropper />
               // <div
               //   className="d-flex justify-content-center align-items-center"
               // >
@@ -299,7 +295,7 @@ export default function UserDetailsPanel() {
               //         overflow: "hidden",
               //       }}
               //     >
-                  
+
               //       <img
               //         src={profileImage}
               //         alt="Profile Icon"

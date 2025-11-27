@@ -288,7 +288,7 @@ const OngoingTableWrapper = styled(TableWrapper)`
 // ========================================================================
 
 const Appointments = () => {
-    const [ongoingAppointments, setOngoingAppointments] = useState([]);
+  const [ongoingAppointments, setOngoingAppointments] = useState([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [pastAppointments, setPastAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -304,9 +304,13 @@ const Appointments = () => {
     const fetchAppointments = async () => {
       try {
         const response = await axios.get(
-          `${API_BASE_URL}/api/appointments/doctor/${doctorId}`
+          `${API_BASE_URL}/api/appointments/doctor/${doctorId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`
+          }
+        }
         );
-       setOngoingAppointments(response.data.ongoing || []);
+        setOngoingAppointments(response.data.ongoing || []);
         setUpcomingAppointments(response.data.upcoming || []);
         setPastAppointments(response.data.past || []);
       } catch (error) {
@@ -370,7 +374,7 @@ const Appointments = () => {
     }
   };
 
-  
+
 
   const filterData = (appointments) =>
     appointments.filter((appointment) => {
@@ -419,66 +423,67 @@ const Appointments = () => {
                 <td className="capitalize">{appt.type || "—"}</td>
                 <td>₹{appt.amount || 0}</td>
                 <td>
-<Select
-  options={[
-    { value: "join", label: "Join", color: "#4CAF50" },
-    { value: "cancel", label: "Cancel", color: "#F44336" },
-    { value: "completed", label: "Completed", color: "#2196F3" },
-  ]}
-  
-  defaultValue={{
-    value: appt.status,
-    label:
-      appt.status?.charAt(0).toUpperCase() +
-      appt.status?.slice(1).toLowerCase(),
-    color: getStatusColor(appt.status),
-  }}
-  onChange={(opt) => handleAction(appt, opt.value)}
-  isDisabled={
-    appt.status === "cancelled" ||
-    appt.status === "completed" ||
-    isCancelling
-  }
-  isSearchable={false}
-styles={{
-  control: (base, state) => ({
-    ...base,
-    backgroundColor: getStatusColor(state?.selectProps?.value?.value || appt.status),
-    color: "white",
-    borderRadius: 8,
-    border: "none",
-    boxShadow: "none",
-    minWidth: 130,
-    "&:hover": { cursor: "pointer" },
-  }),
-  singleValue: (base, state) => ({
-    ...base,
-    color: "white",
-    fontWeight: 500,
-  }),
-  menu: (base) => ({
-    ...base,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    overflow: "hidden",
-    zIndex: 5,
-  }),
-  option: (base, { data, isFocused }) => ({
-    ...base,
-    backgroundColor: isFocused ? data.color : "#fff",
-    color: isFocused ? "white" : data.color,
-    fontWeight: 500,
-    cursor: "pointer",
-  }),
-  dropdownIndicator: (base) => ({
-    ...base,
-    color: "white",
-  }),
-  indicatorSeparator: () => ({ display: "none" }),
-}}/>
+                  <Select
+                    options={[
+                      { value: "join", label: "Join", color: "#4CAF50" },
+                      { value: "cancel", label: "Cancel", color: "#F44336" },
+                      { value: "completed", label: "Completed", color: "#2196F3" },
+                    ]}
+
+                    defaultValue={{
+                      value: appt.status,
+                      label:
+                        appt.status?.charAt(0).toUpperCase() +
+                        appt.status?.slice(1).toLowerCase(),
+                      color: getStatusColor(appt.status),
+                    }}
+                    onChange={(opt) => handleAction(appt, opt.value)}
+                    isDisabled={
+                      appt.status === "cancelled" ||
+                      appt.status === "completed" ||
+                      isCancelling
+                    }
+                    isSearchable={false}
+                    styles={{
+                      control: (base, state) => ({
+                        ...base,
+                        backgroundColor: getStatusColor(state?.selectProps?.value?.value || appt.status),
+                        color: "white",
+                        borderRadius: 8,
+                        border: "none",
+                        boxShadow: "none",
+                        minWidth: 130,
+                        "&:hover": { cursor: "pointer" },
+                      }),
+                      singleValue: (base, state) => ({
+                        ...base,
+                        color: "white",
+                        fontWeight: 500,
+                      }),
+                      menu: (base) => ({
+                        ...base,
+                        backgroundColor: "#fff",
+                        borderRadius: 8,
+                        overflow: "hidden",
+                        zIndex: 5,
+                      }),
+                      option: (base, { data, isFocused }) => ({
+                        ...base,
+                        backgroundColor: isFocused ? data.color : "#fff",
+                        color: isFocused ? "white" : data.color,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }),
+                      dropdownIndicator: (base) => ({
+                        ...base,
+                        color: "white",
+                      }),
+                      indicatorSeparator: () => ({ display: "none" }),
+                    }} />
                 </td>
               </tr>
-            );          })
+            );
+          })
         ) : (
           <tr>
             <td colSpan={showCancel ? 7 : 6} className="no-data">
@@ -524,17 +529,17 @@ styles={{
   const paginatedUpcoming = paginateData(filteredUpcoming, upcomingPage);
 
   useEffect(() => {
-  if (!doctorId) {
-    console.log("🚫 No doctorId, skipping socket connection");
-    return;
-  }
+    if (!doctorId) {
+      console.log("🚫 No doctorId, skipping socket connection");
+      return;
+    }
 
     const fetchAppointments = async () => {
       try {
         const response = await axios.get(
           `${API_BASE_URL}/api/appointments/doctor/${doctorId}`
         );
-       setOngoingAppointments(response.data.ongoing || []);
+        setOngoingAppointments(response.data.ongoing || []);
         setUpcomingAppointments(response.data.upcoming || []);
         setPastAppointments(response.data.past || []);
       } catch (error) {
@@ -545,112 +550,112 @@ styles={{
     };
 
 
-  console.log("🔌 Initializing socket connection for doctor id:", doctorId);
+    console.log("🔌 Initializing socket connection for doctor id:", doctorId);
 
-  // Join doctor's personal room
-  console.log("➡️ Emitting joinDoctorRoom event");
-  // 
+    // Join doctor's personal room
+    console.log("➡️ Emitting joinDoctorRoom event");
+    // 
     socket.emit("joinDoctorRoom", doctorId);
 
 
-  // Listen for real-time updates
-  const onUpdated = (updatedAppointment) => {
-  console.log("📡 Received appointmentUpdated event:", updatedAppointment);
-  fetchAppointments();
+    // Listen for real-time updates
+    const onUpdated = (updatedAppointment) => {
+      console.log("📡 Received appointmentUpdated event:", updatedAppointment);
+      fetchAppointments();
 
-  // // Check if this appointment already exists in upcomingAppointments
-  // setUpcomingAppointments((prev) => {
-  //   const exists = prev.some((appt) => appt._id === updatedAppointment._id);
-  //   if (exists) {
-  //     // Update existing appointment
-  //     return prev.map((appt) =>
-  //       appt._id === updatedAppointment._id ? updatedAppointment : appt
+      // // Check if this appointment already exists in upcomingAppointments
+      // setUpcomingAppointments((prev) => {
+      //   const exists = prev.some((appt) => appt._id === updatedAppointment._id);
+      //   if (exists) {
+      //     // Update existing appointment
+      //     return prev.map((appt) =>
+      //       appt._id === updatedAppointment._id ? updatedAppointment : appt
+      //     );
+      //   } else {
+      //     // Add new appointment (always upcoming)
+      //     return [updatedAppointment, ...prev];
+      //   }
+      // });
+
+      // // Also update ongoingAppointments if it exists there
+      // setOngoingAppointments((prev) =>
+      //   prev.map((appt) =>
+      //     appt._id === updatedAppointment._id ? updatedAppointment : appt
+      //   )
+      // );
+    };
+
+
+    const onDeleted = (deletedId) => {
+      console.log("🗑 Received appointmentDeleted event for id:", deletedId);
+      fetchAppointments();
+      // setOngoingAppointments((prev) => prev.filter((appt) => appt._id !== deletedId));
+      // setUpcomingAppointments((prev) => prev.filter((appt) => appt._id !== deletedId));
+    };
+
+    socket.on("appointmentUpdated", onUpdated);
+    socket.on("appointmentDeleted", onDeleted);
+
+    // Listen to connection/disconnection
+    // socket.on("connect", () => {
+    //   console.log("✅ Socket connected with id:", socket.id);
+    // });
+
+    // socket.on("disconnect", (reason) => {
+    //   console.log("⚠️ Socket disconnected:", reason);
+    // });
+
+    // socket.on("connect_error", (err) => {
+    //   console.error("❌ Socket connection error:", err);
+    // });
+
+    // Cleanup
+    return () => {
+      console.log("🧹 Cleaning up socket listeners");
+      socket.off("appointmentUpdated", onUpdated);
+      socket.off("appointmentDeleted", onDeleted);
+      // socket.off("connect");
+      // socket.off("disconnect");
+      // socket.off("connect_error");
+    };
+  }, [doctorId]);
+
+  //   useEffect(() => {
+  //   if (!doctorId) return;
+  //   console.log("In socket connetion for doctor id",doctorId)
+
+  //   // Join doctor's personal room
+  //   socket.emit("joinDoctorRoom", doctorId);
+
+  //   // Listen for real-time updates
+  //   socket.on("appointmentUpdated", (updatedAppointment) => {
+  //     setOngoingAppointments((prev) =>
+  //       prev.map((appt) =>
+  //         appt._id === updatedAppointment._id ? updatedAppointment : appt
+  //       )
   //     );
-  //   } else {
-  //     // Add new appointment (always upcoming)
-  //     return [updatedAppointment, ...prev];
-  //   }
-  // });
+  //     setUpcomingAppointments((prev) =>
+  //       prev.map((appt) =>
+  //         appt._id === updatedAppointment._id ? updatedAppointment : appt
+  //       )
+  //     );
+  //   });
 
-  // // Also update ongoingAppointments if it exists there
-  // setOngoingAppointments((prev) =>
-  //   prev.map((appt) =>
-  //     appt._id === updatedAppointment._id ? updatedAppointment : appt
-  //   )
-  // );
-};
+  //   socket.on("appointmentDeleted", (deletedId) => {
+  //     setOngoingAppointments((prev) =>
+  //       prev.filter((appt) => appt._id !== deletedId)
+  //     );
+  //     setUpcomingAppointments((prev) =>
+  //       prev.filter((appt) => appt._id !== deletedId)
+  //     );
+  //   });
 
-
-  const onDeleted = (deletedId) => {
-    console.log("🗑 Received appointmentDeleted event for id:", deletedId);
-    fetchAppointments();
-    // setOngoingAppointments((prev) => prev.filter((appt) => appt._id !== deletedId));
-    // setUpcomingAppointments((prev) => prev.filter((appt) => appt._id !== deletedId));
-  };
-
-  socket.on("appointmentUpdated", onUpdated);
-  socket.on("appointmentDeleted", onDeleted);
-
-  // Listen to connection/disconnection
-  // socket.on("connect", () => {
-  //   console.log("✅ Socket connected with id:", socket.id);
-  // });
-
-  // socket.on("disconnect", (reason) => {
-  //   console.log("⚠️ Socket disconnected:", reason);
-  // });
-
-  // socket.on("connect_error", (err) => {
-  //   console.error("❌ Socket connection error:", err);
-  // });
-
-  // Cleanup
-  return () => {
-    console.log("🧹 Cleaning up socket listeners");
-    socket.off("appointmentUpdated", onUpdated);
-    socket.off("appointmentDeleted", onDeleted);
-    // socket.off("connect");
-    // socket.off("disconnect");
-    // socket.off("connect_error");
-  };
-}, [doctorId]);
-
-//   useEffect(() => {
-//   if (!doctorId) return;
-//   console.log("In socket connetion for doctor id",doctorId)
-
-//   // Join doctor's personal room
-//   socket.emit("joinDoctorRoom", doctorId);
-
-//   // Listen for real-time updates
-//   socket.on("appointmentUpdated", (updatedAppointment) => {
-//     setOngoingAppointments((prev) =>
-//       prev.map((appt) =>
-//         appt._id === updatedAppointment._id ? updatedAppointment : appt
-//       )
-//     );
-//     setUpcomingAppointments((prev) =>
-//       prev.map((appt) =>
-//         appt._id === updatedAppointment._id ? updatedAppointment : appt
-//       )
-//     );
-//   });
-
-//   socket.on("appointmentDeleted", (deletedId) => {
-//     setOngoingAppointments((prev) =>
-//       prev.filter((appt) => appt._id !== deletedId)
-//     );
-//     setUpcomingAppointments((prev) =>
-//       prev.filter((appt) => appt._id !== deletedId)
-//     );
-//   });
-
-//   // Cleanup
-//   return () => {
-//     socket.off("appointmentUpdated");
-//     socket.off("appointmentDeleted");
-//   };
-// }, [doctorId]);
+  //   // Cleanup
+  //   return () => {
+  //     socket.off("appointmentUpdated");
+  //     socket.off("appointmentDeleted");
+  //   };
+  // }, [doctorId]);
 
   // --- Main component render (uses styled components) ---
   return (
@@ -685,9 +690,9 @@ styles={{
         <AppointmentSection>
           <SectionTitle>Ongoing</SectionTitle>
           <OngoingTableWrapper>
-          {/* <TableWrapper> */}
+            {/* <TableWrapper> */}
             {loading ? <p>Loading...</p> : renderTable(ongoingAppointments, true)}
-          {/* </TableWrapper> */}
+            {/* </TableWrapper> */}
           </OngoingTableWrapper>
         </AppointmentSection>
 

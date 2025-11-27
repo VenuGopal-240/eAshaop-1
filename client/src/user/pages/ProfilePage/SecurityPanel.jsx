@@ -27,7 +27,7 @@ function SecurityAndLogin() {
         return;
       }
       const userId = storedUser.id;
-      const token = localStorage.getItem("token"); // optional
+      const token = localStorage.getItem("authToken"); // optional
 
       const response = await fetch(`${API_BASE_URL}/api/user/${userId}`, {
         headers: {

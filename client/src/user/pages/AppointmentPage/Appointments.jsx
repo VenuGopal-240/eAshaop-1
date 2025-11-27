@@ -8,12 +8,13 @@ import calendarIcon from "../../assets/icons/calendar.png";
 import profile from "../../assets/icons/profile.png";
 import styles from "../AppointmentPage/Appointments.module.css";
 import { API_BASE_URL } from "../../../api-config";
+import { getAppointmentByUserId } from "../../../Util/apiRequest";
 
 const Appointments = () => {
   const [activeTab, setActiveTab] = useState("virtual");
   const [showPopup, setShowPopup] = useState(false);
   // const [cancelTarget, setCancelTarget] = useState(null);
-  const [appointments, setAppointments] = useState({ upcoming: [],onGoing:[], past: [] });
+  const [appointments, setAppointments] = useState({ upcoming: [], onGoing: [], past: [] });
   const [loading, setLoading] = useState(true);
   // const navigate = useNavigate();
 
@@ -40,14 +41,18 @@ const Appointments = () => {
   // ✅ Fetch appointments
   useEffect(() => {
     const fetchAppointments = async () => {
+      const userId = localStorage.getItem("userId");
+
       try {
-        const res = await axios.get(
-          `${API_BASE_URL}/api/appointments/user/${userId}`
-        );
+        const res = await getAppointmentByUserId(userId);
+        // const res = await axios.get(
+        //   `${API_BASE_URL}/api/appointments/user/${userId}`
+        // );
+        console.log("Fetched appointments:", res, userId);
         setAppointments({
-          onGoing: res.data.onGoing || [],
-          upcoming: res.data.upcoming || [],
-          past: res.data.past || [],
+          onGoing: res?.onGoing || [],
+          upcoming: res?.upcoming || [],
+          past: res?.past || [],
         });
       } catch (err) {
         console.error("Error fetching appointments:", err);
@@ -258,7 +263,7 @@ const Appointments = () => {
 
 
 
-  
+
 
   return (
     <>
@@ -330,23 +335,23 @@ const Appointments = () => {
             )}
           </div> */}
           {(() => {
-  const filteredOngoing = (appointments.onGoing || []).filter(
-    (a) =>
-      a.status === "booked" &&
-      ((a.type === "video" && activeTab === "virtual") ||
-        (a.type === "clinic" && activeTab === "clinic"))
-  );
+            const filteredOngoing = (appointments.onGoing || []).filter(
+              (a) =>
+                a.status === "booked" &&
+                ((a.type === "video" && activeTab === "virtual") ||
+                  (a.type === "clinic" && activeTab === "clinic"))
+            );
 
-  return (
-    <div className={`${styles.rowContainer} row`}>
-      {filteredOngoing.length > 0 ? (
-        filteredOngoing.map((appt) => renderCard(appt, false, true))
-      ) : (
-        <p>No ongoing appointments</p>
-      )}
-    </div>
-  );
-})()}
+            return (
+              <div className={`${styles.rowContainer} row`}>
+                {filteredOngoing.length > 0 ? (
+                  filteredOngoing.map((appt) => renderCard(appt, false, true))
+                ) : (
+                  <p>No ongoing appointments</p>
+                )}
+              </div>
+            );
+          })()}
 
 
 
@@ -371,21 +376,21 @@ const Appointments = () => {
             )} */}
 
             {(() => {
-    const filteredUpcoming = (appointments.upcoming || []).filter(
-      (a) =>
-        a.status === "booked" &&
-        (
-          (a.type === "video" && activeTab === "virtual") ||
-          (a.type === "clinic" && activeTab === "clinic")
-        )
-    );
+              const filteredUpcoming = (appointments.upcoming || []).filter(
+                (a) =>
+                  a.status === "booked" &&
+                  (
+                    (a.type === "video" && activeTab === "virtual") ||
+                    (a.type === "clinic" && activeTab === "clinic")
+                  )
+              );
 
-    return filteredUpcoming.length > 0 ? (
-      filteredUpcoming.map((appt) => renderCard(appt, false))
-    ) : (
-      <p>No upcoming appointments</p>
-    );
-  })()}
+              return filteredUpcoming.length > 0 ? (
+                filteredUpcoming.map((appt) => renderCard(appt, false))
+              ) : (
+                <p>No upcoming appointments</p>
+              );
+            })()}
 
           </div>
 
@@ -408,23 +413,23 @@ appointments.past
             )}
           </div> */}
           {(() => {
-  const filteredPast = (appointments.past || []).filter(
-    (a) =>
-      a.status === "booked" &&
-      ((a.type === "video" && activeTab === "virtual") ||
-        (a.type === "clinic" && activeTab === "clinic"))
-  );
+            const filteredPast = (appointments.past || []).filter(
+              (a) =>
+                a.status === "booked" &&
+                ((a.type === "video" && activeTab === "virtual") ||
+                  (a.type === "clinic" && activeTab === "clinic"))
+            );
 
-  return (
-    <div className="row">
-      {filteredPast.length > 0 ? (
-        filteredPast.map((appt) => renderCard(appt, true))
-      ) : (
-        <p>No past appointments</p>
-      )}
-    </div>
-  );
-})()}
+            return (
+              <div className="row">
+                {filteredPast.length > 0 ? (
+                  filteredPast.map((appt) => renderCard(appt, true))
+                ) : (
+                  <p>No past appointments</p>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 

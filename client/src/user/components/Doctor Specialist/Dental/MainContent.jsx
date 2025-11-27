@@ -26,6 +26,7 @@ import { useParams } from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
 import './MainContent.css';
 import socket from "../../../../commonComponents/socket";
+import { getDoctorsByCategoryBy_uuid } from "../../../../Util/apiRequest";
 
 
 // const mockDoctors = Array(9).fill({
@@ -39,93 +40,100 @@ import socket from "../../../../commonComponents/socket";
 //   specialityicon: specialityimage,
 // });
 
-const MainContent = ({ selectedFilters, setSelectedFilters, clearAllFilters, onToggleSidebar,categorySlug }) => {
+const MainContent = ({ selectedFilters, setSelectedFilters, clearAllFilters, onToggleSidebar, categorySlug }) => {
   const navigate = useNavigate();
   const { uuid } = useParams();
-const [selected, setSelected] = useState(
-  sessionStorage.getItem("selectedConsultation") || ""
-);
+  const [selected, setSelected] = useState(
+    sessionStorage.getItem("selectedConsultation") || ""
+  );
   // const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 1439);
   const [doctors, setDoctors] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [allDoctors, setAllDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [allDoctors, setAllDoctors] = useState([]);
 
-    useEffect(() => {
-      if (!uuid) return;
-    
-      async function fetchDoctors() {
-        setLoading(true);
-        try {
-          const url = `${API_BASE_URL}/api/categories/${uuid}/doctors`;
-          const res = await fetch(url);
-          if (!res.ok) throw new Error("Failed to fetch doctors");
-          const data = await res.json();
-          setAllDoctors(data.doctors || []);
-          setDoctors(data.doctors || []); // show all initially
-        } catch (err) {
-          console.error("Error fetching doctors:", err);
-          setAllDoctors([]);
-          setDoctors([]);
-        } finally {
-          setLoading(false);
-        }
+  useEffect(() => {
+    if (!uuid) return;
+
+    async function fetchDoctors() {
+      setLoading(true);
+      try {
+        const url = `${API_BASE_URL}/api/categories/${uuid}/doctors`;
+        const res = await fetch(url, {
+          method: 'GET', headers: {
+            'Content-Type': 'application/json',
+            'authorization': `Bearer ${localStorage.getItem("authToken")}`
+          },
+        });
+        if (!res.ok) throw new Error("Failed to fetch doctors");
+        const data = await res.json();
+        // const data = getDoctorsByCategoryBy_uuid(uuid);
+        console.log("Fetched doctors for category:", data);
+        setAllDoctors(data.doctors || []);
+        setDoctors(data.doctors || []); // show all initially
+      } catch (err) {
+        console.error("Error fetching doctors:", err);
+        setAllDoctors([]);
+        setDoctors([]);
+      } finally {
+        setLoading(false);
       }
-    
-      fetchDoctors();
+    }
 
-      socket.on("connect", () => {
-    console.log("✅ Socket connected with ID:", socket.id);
-
-    // ✅ Join the category room once connected
-    socket.emit("joinCategoryRoom", uuid, () => {
-      console.log("📡 Joined category room for:", uuid);
-    });
-  });
-
-  // ✅ Handle connection errors
-  socket.on("connect_error", (err) => {
-    console.error("❌ Socket connection error:", err.message);
-  });
-
-  // ✅ Handle disconnections
-  socket.on("disconnect", (reason) => {
-    console.warn("⚠️ Socket disconnected:", reason);
-  });
-
-  // ✅ Handle category update events
-  socket.on("categoryDoctorsUpdated", (data) => {
-    console.log("📬 Category update received:", data);
-    // Re-fetch the doctors list
     fetchDoctors();
-  });
 
-  return () => {
-    socket.off("categoryDoctorsUpdated");
-    socket.disconnect();
-    console.log("🔌 Socket disconnected (component unmounted)");
-  };
+    socket.on("connect", () => {
+      console.log("✅ Socket connected with ID:", socket.id);
 
-    }, [uuid]);
-    
-    
-    
-    // Client-side filter when selected toggle changes
-    useEffect(() => {
-      if (!selected) {
-        setDoctors(allDoctors);
-      } else {
-                        let mode = selected === "video" ? "Video Consultation" : "Clinic Visit";
-    
-        const filtered = allDoctors.filter(
-          (doc) => doc.consultationMode === mode || doc.consultationMode === "Both"
-        );
-        setDoctors(filtered);
-      }
-    }, [selected, allDoctors]);
-    
-    
-  
+      // ✅ Join the category room once connected
+      socket.emit("joinCategoryRoom", uuid, () => {
+        console.log("📡 Joined category room for:", uuid);
+      });
+    });
+
+    // ✅ Handle connection errors
+    socket.on("connect_error", (err) => {
+      console.error("❌ Socket connection error:", err.message);
+    });
+
+    // ✅ Handle disconnections
+    socket.on("disconnect", (reason) => {
+      console.warn("⚠️ Socket disconnected:", reason);
+    });
+
+    // ✅ Handle category update events
+    socket.on("categoryDoctorsUpdated", (data) => {
+      console.log("📬 Category update received:", data);
+      // Re-fetch the doctors list
+      fetchDoctors();
+    });
+
+    return () => {
+      socket.off("categoryDoctorsUpdated");
+      socket.disconnect();
+      console.log("🔌 Socket disconnected (component unmounted)");
+    };
+
+  }, [uuid]);
+
+
+
+  // Client-side filter when selected toggle changes
+  useEffect(() => {
+    if (!selected) {
+      setDoctors(allDoctors);
+    } else {
+      let mode = selected === "video" ? "Video Consultation" : "Clinic Visit";
+
+      const filtered = allDoctors.filter(
+        (doc) => doc.consultationMode === mode || doc.consultationMode === "Both"
+      );
+      setDoctors(filtered);
+    }
+  }, [selected, allDoctors]);
+
+
+
 
   useEffect(() => {
     function handleResize() {
@@ -143,12 +151,12 @@ const [selected, setSelected] = useState(
   };
 
   const handleSelect = (type) => {
-  const newValue = selected === type ? "" : type;
-  setSelected(newValue);
-  localStorage.setItem("selectedConsultationType", newValue);
-};
+    const newValue = selected === type ? "" : type;
+    setSelected(newValue);
+    localStorage.setItem("selectedConsultationType", newValue);
+  };
 
-    if (loading) return <p>Loading doctors...</p>;
+  if (loading) return <p>Loading doctors...</p>;
 
 
   return (
@@ -157,12 +165,12 @@ const [selected, setSelected] = useState(
       <div
         className="mb-2 d-flex text-decoration-none navigations"
         style={{ color: "#00A99D" }}>
-          <span>
+        <span>
           <Link to="/user/category" className="text-decoration-none">
-        <span style={{color:'#8E8E8E',fontSize:'18px'}} className="me-2">Category</span>
-        </Link></span>
-        <span className="me-2" style={{width:'18px',height:'18px',marginTop:'7px'}}><img src={arrowright} /></span>
-        <span style={{ textDecoration: "underline",fontSize:'1.12rem' }}>Dental</span>
+            <span style={{ color: '#8E8E8E', fontSize: '18px' }} className="me-2">Category</span>
+          </Link></span>
+        <span className="me-2" style={{ width: '18px', height: '18px', marginTop: '7px' }}><img src={arrowright} /></span>
+        <span style={{ textDecoration: "underline", fontSize: '1.12rem' }}>Dental</span>
       </div>
 
       {/* Header */}
@@ -170,68 +178,66 @@ const [selected, setSelected] = useState(
         <div className=" d-none  align-items-center gap-3 text">
           <img src={Category} alt="Cardiology Icon" width={52} height={52} />
           <div>
-<h2 className="mb-1">{categorySlug?.replace(/-/g, " ")}</h2>
-            <p className="text-muted mb-0 d-flex" style={{fontSize:'1.12rem'}}>
+            <h2 className="mb-1">{categorySlug?.replace(/-/g, " ")}</h2>
+            <p className="text-muted mb-0 d-flex" style={{ fontSize: '1.12rem' }}>
               <img src={Doctoricon} height={18} width={18} className="me-1" alt="Doctor" />
               {doctors.length === 1 ? "Doctor" : "Doctors"} {doctors.length}
             </p>
           </div>
         </div>
         <div className="d-flex align-items-center gap-3 position-relative filters-with-search" style={{ width: "370px" }}>
-     {/* Hamburger icon - only on mobile */}
-  <button 
-    className="btn filters d-flex border border-gray-300" 
-    style={{ background: "transparent", border: "1px solid #F7F7F7" , borderRadius: "28px", padding: "10px 24px 10px 10px", }}
-    onClick={onToggleSidebar}
-  >
-    <img src={Filter} height={18} width={18}/>
-    <span className="ms-2">Filters</span>
-  </button>
-    {/* Search Icon (Left) */}
-  <div className="position-relative flex-grow-1 ">
-  <input
-    type="text"
-    placeholder="Find doctor"
-    className="form-control mb-2 mt-1 w-100 searchbar outline-none outline-gray-300"
-    style={{
-      paddingLeft: "45px",
-      paddingRight: "40px",
-      paddingTop: "18px",
-      paddingBottom: "18px",
-      color: "#8E8E8E",
-      borderRadius: "23px",
-      // border: "1px solid #F7F7F7",
-      // outline: "1px solid grey",
-      boxShadow: "none",
-      height: "45px"
-    }}
-  />
+          {/* Hamburger icon - only on mobile */}
+          <button
+            className="btn filters d-flex border border-gray-300"
+            style={{ background: "transparent", border: "1px solid #F7F7F7", borderRadius: "28px", padding: "10px 24px 10px 10px", }}
+            onClick={onToggleSidebar}
+          >
+            <img src={Filter} height={18} width={18} />
+            <span className="ms-2">Filters</span>
+          </button>
+          {/* Search Icon (Left) */}
+          <div className="position-relative flex-grow-1 ">
+            <input
+              type="text"
+              placeholder="Find doctor"
+              className="form-control mb-2 mt-1 w-100 searchbar outline-none outline-gray-300"
+              style={{
+                paddingLeft: "45px",
+                paddingRight: "40px",
+                paddingTop: "18px",
+                paddingBottom: "18px",
+                color: "#8E8E8E",
+                borderRadius: "23px",
+                // border: "1px solid #F7F7F7",
+                // outline: "1px solid grey",
+                boxShadow: "none",
+                height: "45px"
+              }}
+            />
 
-  {/* Search Icon */}
-  <img src={Search} alt="Search Icon"
-    className="position-absolute start-0 ms-3"
-    style={{
-      top: "50%",
-      transform: "translateY(-50%) translateY(-2px)", // tweak for centering
-      color: "#aaa",
-      width: "24px",
-      height: "24px",
-    }}
-  />
+            <img src={Search} alt="Search Icon"
+              className="position-absolute start-0 ms-3"
+              style={{
+                top: "50%",
+                transform: "translateY(-50%) translateY(-2px)", 
+                color: "#aaa",
+                width: "24px",
+                height: "24px",
+              }}
+            />
 
-  {/* Mic Icon */}
-  <img src={Mic} alt="Mic Icon"
-    className="position-absolute end-0 me-3"
-    style={{
-      top: "50%",
-      transform: "translateY(-50%) translateY(-1px)",
-      color: "#aaa",
-      width: "24px",
-      height: "24px"
-    }}
-  />
-</div>
-</div>
+            <img src={Mic} alt="Mic Icon"
+              className="position-absolute end-0 me-3"
+              style={{
+                top: "50%",
+                transform: "translateY(-50%) translateY(-1px)",
+                color: "#aaa",
+                width: "24px",
+                height: "24px"
+              }}
+            />
+          </div>
+        </div>
 
       </div>
 
@@ -249,7 +255,7 @@ const [selected, setSelected] = useState(
             className="btn fw-semibold px-4 py-2 rounded-pill d-flex align-items-center"
             onClick={() => setSelected("video")}
           >
-            <span className="me-2"><img src={video} height={24} width={24} className="toggle-images"/></span>
+            <span className="me-2"><img src={video} height={24} width={24} className="toggle-images" /></span>
             Video Consultant
           </button>
           <button
@@ -260,7 +266,7 @@ const [selected, setSelected] = useState(
             className="btn1 fw-semibold  rounded-pill d-flex align-items-center"
             onClick={() => setSelected("clinic")}
           >
-            <span className="clinic-visit me-1 ps-4"><img src={walk} height={14} width={24} className="toggle-images"/></span>
+            <span className="clinic-visit me-1 ps-4"><img src={walk} height={14} width={24} className="toggle-images" /></span>
             Clinic Visit
           </button>
         </div>
@@ -268,47 +274,47 @@ const [selected, setSelected] = useState(
 
       {/* Selected Filters */}
       {/* Selected Filters */}
-<div className="d-flex flex-wrap align-items-center mb-4">
-  {/* Show Clear Filters button only if total selected filters >= 2 */}
-  {Object.values(selectedFilters).flat().length >= 2 && (
-    <span
-      className="badge rounded-pill text-bg-light me-2 mb-2 d-inline-flex align-items-center px-3 py-2"
-      style={{
-        fontSize: "0.85rem",
-        cursor: "pointer",
-      }}
-      onClick={clearAllFilters}
-    >
-      Clear filters
-      <FiX className="ms-2" />
-    </span>
-  )}
+      <div className="d-flex flex-wrap align-items-center mb-4">
+        {/* Show Clear Filters button only if total selected filters >= 2 */}
+        {Object.values(selectedFilters).flat().length >= 2 && (
+          <span
+            className="badge rounded-pill text-bg-light me-2 mb-2 d-inline-flex align-items-center px-3 py-2"
+            style={{
+              fontSize: "0.85rem",
+              cursor: "pointer",
+            }}
+            onClick={clearAllFilters}
+          >
+            Clear filters
+            <FiX className="ms-2" />
+          </span>
+        )}
 
-  {/* Render individual selected filter badges */}
-  {Object.entries(selectedFilters).map(([category, values]) =>
-    values.map((value, idx) => (
-      <span
-        key={`${category}-${value}-${idx}`}
-        className="badge rounded-pill text-bg-light me-2 mb-2 d-inline-flex align-items-center px-3 py-2"
-        style={{ fontSize: "0.87rem" }}
-      >
-        {value}
-        <FiX
-          className="ms-2 cursor-pointer"
-          role="button"
-          onClick={() => handleRemoveFilter(category, value)}
-        />
-      </span>
-    ))
-  )}
-</div>
+        {/* Render individual selected filter badges */}
+        {Object.entries(selectedFilters).map(([category, values]) =>
+          values.map((value, idx) => (
+            <span
+              key={`${category}-${value}-${idx}`}
+              className="badge rounded-pill text-bg-light me-2 mb-2 d-inline-flex align-items-center px-3 py-2"
+              style={{ fontSize: "0.87rem" }}
+            >
+              {value}
+              <FiX
+                className="ms-2 cursor-pointer"
+                role="button"
+                onClick={() => handleRemoveFilter(category, value)}
+              />
+            </span>
+          ))
+        )}
+      </div>
 
 
       {/* Doctor Cards */}
 
 
       <div className="row">
-                        {doctors.length === 0 && <p>No doctors available for this consultation type.</p>}
+        {doctors.length === 0 && <p>No doctors available for this consultation type.</p>}
 
         {doctors.map((doc, index) => (
           <div key={index} className="col-md-4 col-sm-6 mb-4">
@@ -356,7 +362,7 @@ const [selected, setSelected] = useState(
                         <img
                           src={Category}
                           className="me-1"
-                          alt="Speciality" style={{width:'15px',height:'15px'}}
+                          alt="Speciality" style={{ width: '15px', height: '15px' }}
                         />
                         {doc.speciality} <span className="ms-1"> | {doc.experience} years</span>
                       </div>
@@ -400,7 +406,7 @@ const [selected, setSelected] = useState(
                           <img
                             src={Category}
                             className="me-1"
-                            alt="Speciality" style={{width:'25px',height:'25px'}}
+                            alt="Speciality" style={{ width: '25px', height: '25px' }}
                           />
                           {doc.speciality} <span className="ms-1"> | {doc.experience} Years</span>
                         </div>
@@ -436,29 +442,29 @@ const [selected, setSelected] = useState(
                   </div>
                 </div>
 
-<button
-  className="btn w-100 rounded-pill"
-  style={{ backgroundColor: "#00B2A9", color: "white", fontSize: '14px' }}
-  onClick={() => {
-  if (!selected) {
-    toast.warning("Please select consultation type before booking a slot", {
-      position: "top-right",
-      autoClose: 3000,
-    });
-    return;
-  }
-    navigate("/user/category/bookappointment", {
-  state: { 
-    doctorId: doc._id,
-    consultationType: selected === "video" ? "Video" : "Clinic",
-    selectedType: selected // 🔥 keep the selected mode for when you come back
-  }
-});
+                <button
+                  className="btn w-100 rounded-pill"
+                  style={{ backgroundColor: "#00B2A9", color: "white", fontSize: '14px' }}
+                  onClick={() => {
+                    if (!selected) {
+                      toast.warning("Please select consultation type before booking a slot", {
+                        position: "top-right",
+                        autoClose: 3000,
+                      });
+                      return;
+                    }
+                    navigate("/user/category/bookappointment", {
+                      state: {
+                        doctorId: doc._id,
+                        consultationType: selected === "video" ? "Video" : "Clinic",
+                        selectedType: selected // 🔥 keep the selected mode for when you come back
+                      }
+                    });
 
-  }}
->
-  Book a slot
-</button>
+                  }}
+                >
+                  Book a slot
+                </button>
               </div>
             </div>
           </div>

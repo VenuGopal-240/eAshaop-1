@@ -1,5 +1,6 @@
 import React from "react";
 import { FaStar, FaRegStar, FaRegCommentDots } from "react-icons/fa";
+import CommentSection from "../../../user/components/Appointment/CommentSection";
 
 const ratingsData = [
   { stars: 5, count: 100 },
@@ -42,13 +43,13 @@ const ReviewsPage = () => {
     ratingsData.reduce((acc, cur) => acc + cur.stars * cur.count, 0) /
     totalReviews
   ).toFixed(1);
-
+  console.log("Average Rating:", localStorage.getItem("doctorId"));
   return (
     <div className="ml-0 md:pl-[80px] lg:pl-[327px] mt-[85px] md:mt-[95px] lg:mt-[80px] font-urbanist px-4 sm:px-6">
       {/* Header */}
       <h1 className="text-2xl font-semibold mb-6 lg:text-left hidden lg:block">
-    Reviews and Ratings
-  </h1>
+        Reviews and Ratings
+      </h1>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -63,10 +64,16 @@ const ReviewsPage = () => {
           placeholder="Search by Patient Name"
           className="border border-[#F7F7F7] rounded-md px-4 py-2 w-full sm:flex-1"
         />
+
+      </div>
+      <div>
+        <CommentSection doctorId={localStorage.getItem("doctorId")} role="doctor"/>
+
       </div>
 
       {/* Ratings and Insights */}
-     
+
+
     </div>
   );
 };

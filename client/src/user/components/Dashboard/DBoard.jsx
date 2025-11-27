@@ -40,6 +40,7 @@ import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormControl from '@mui/material/FormControl';
 import FormLabel from '@mui/material/FormLabel';
+import { getAllDoctors, userDetails } from "../../../Util/apiRequest";
 
 
 
@@ -326,10 +327,11 @@ function DBoard() {
     setUser(storedUser);
 
     // Fetch latest user data from backend
-    fetch(`${API_BASE_URL}/api/user/${storedUser.id}`)
-      .then((res) => res.json()) // parse JSON
+    // fetch(`${API_BASE_URL}/api/user/${storedUser.id}`)
+    //   .then((res) => res.json()) // parse JSON
+    userDetails(storedUser.id)
       .then((data) => {
-        console.log("Fetched user from API:", data);
+        // console.log("Fetched user from API:", data);
         // backend should return { user: {...} } or just {...}
         setUser(data.user || data || storedUser);
       })
@@ -347,23 +349,22 @@ function DBoard() {
 
     const fetchAppointments = async () => {
       try {
-        const res = await axios.get(
-          `${API_BASE_URL}/api/appointments/user/${userId}`
-        );
-        console.log("response from backend", res)
-        setAppointments({
-          upcoming: res.data.upcoming || [],
-          past: res.data.past || [],
-        });
-      } catch (err) {
-        console.error("Error fetching appointments:", err);
-      } finally {
-        setLoading(false);
-      }
+      const e = await fetchAppointments(userId);
+
+      setAppointments({
+        upcoming: e.data.upcoming || [],
+        past: e.data.past || [],
+      });
+    } catch (err) {
+      console.error("Error fetching appointments:", err);
+    } finally {
+      setLoading(false);
+    }
     };
-    fetchAppointments();
-    fetch(`${API_BASE_URL}/api/doctors/all`)
-      .then((res) => res.json())
+    // fetchAppointments();
+    getAllDoctors()
+    // fetch(`${API_BASE_URL}/api/doctors/all`)
+    //   .then((res) => res.json())
       .then((data) => {
         console.log("Fetched doctors:", data);
 

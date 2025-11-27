@@ -38,8 +38,13 @@ const BookingHistory = () => {
       setLoading(true);
       try {
         const response = await axios.get(
-          `${API_BASE_URL}/api/appointments/doctor/${doctorId}`
+          `${API_BASE_URL}/api/appointments/doctor/${doctorId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`
+          }
+        }
         );
+        console.log("Fetched appointments:", response.data);
         setPastAppointments(response.data.past || []);
       } catch (error) {
         console.error("Error fetching appointments:", error);
@@ -50,35 +55,35 @@ const BookingHistory = () => {
 
     fetchAppointments();
 
-     // Listen to connection/disconnection
-      socket.on("connect", () => {
-        console.log("✅ Socket connected with id:", socket.id);
-      });
-    
-      socket.on("disconnect", (reason) => {
-        console.log("⚠️ Socket disconnected:", reason);
-      });
-    
-      socket.on("connect_error", (err) => {
-        console.error("❌ Socket connection error:", err);
-      });
+    // Listen to connection/disconnection
+    socket.on("connect", () => {
+      console.log("✅ Socket connected with id:", socket.id);
+    });
 
-        // socket.emit("joinDoctorRoom", doctorId, (ack) => {
-        //   console.log("✅ joinDoctorRoom ack:", ack);
-        // });
+    socket.on("disconnect", (reason) => {
+      console.log("⚠️ Socket disconnected:", reason);
+    });
 
-    socket.emit("joinDoctorRoom",doctorId)
-    socket.on("appointmentUpdated",fetchAppointments);
-    socket.on("appointmentDeleted",fetchAppointments);
+    socket.on("connect_error", (err) => {
+      console.error("❌ Socket connection error:", err);
+    });
+
+    // socket.emit("joinDoctorRoom", doctorId, (ack) => {
+    //   console.log("✅ joinDoctorRoom ack:", ack);
+    // });
+
+    socket.emit("joinDoctorRoom", doctorId)
+    socket.on("appointmentUpdated", fetchAppointments);
+    socket.on("appointmentDeleted", fetchAppointments);
 
     return () => {
-        console.log("🧹 Cleaning up socket listeners");
-        socket.off("appointmentUpdated", onUpdated);
-        socket.off("appointmentDeleted", onDeleted);
-        socket.off("connect");
-        socket.off("disconnect");
-        socket.off("connect_error");
-      };
+      console.log("🧹 Cleaning up socket listeners");
+      // socket.off("appointmentUpdated", onUpdated);
+      // socket.off("appointmentDeleted", onDeleted);
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("connect_error");
+    };
 
   }, [doctorId]);
 
@@ -118,7 +123,7 @@ const BookingHistory = () => {
   }, [searchTerm, statusFilter, dateFilter]);
 
 
-  const clearFilters=()=>{
+  const clearFilters = () => {
     setSearchTerm("");
     setStatusFilter("All Status");
     setDateFilter("");
@@ -152,7 +157,7 @@ const BookingHistory = () => {
           <option>Cancelled</option>
           <option>Completed</option>
         </select>
-          <button
+        <button
           onClick={clearFilters}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
         >

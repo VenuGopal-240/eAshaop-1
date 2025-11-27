@@ -30,6 +30,7 @@ import Legal from "../../assets/icons/home-hashtag.png";
 import './Topbar.css';
 import { io } from "socket.io-client";
 import socket from '../../../commonComponents/socket';
+import { userDetails } from '../../../Util/apiRequest';
 // import socket from '../../../commonComponents/socket';
 // --- Simple toast popup function
 // --- Enhanced toast popup function ---
@@ -97,26 +98,26 @@ const showToast = (message, options = {}) => {
 
 const Topbar = ({ toggleSidebar: propToggleSidebar, isMobile: propIsMobile } = {}) => {
   const [calculatedIsMobile, setCalculatedIsMobile] = useState(window.innerWidth < 992);
-    const [notifications, setNotifications] = useState([]);
-      const [showDropdown, setShowDropdown] = useState(false);
-      const [expandedIds, setExpandedIds] = useState([]);
-const dropdownRef = React.useRef(null);                                                 
+  const [notifications, setNotifications] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [expandedIds, setExpandedIds] = useState([]);
+  const dropdownRef = React.useRef(null);
 
-useEffect(() => {
-  function handleClickOutside(event) {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setShowDropdown(false);
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
     }
-  }
 
-  if (showDropdown) {
-    document.addEventListener("mousedown", handleClickOutside);
-  } else {
-    document.removeEventListener("mousedown", handleClickOutside);
-  }
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
 
-  return () => document.removeEventListener("mousedown", handleClickOutside);
-}, [showDropdown]);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showDropdown]);
 
   useEffect(() => {
     const handleResize = () => setCalculatedIsMobile(window.innerWidth < 992);
@@ -130,9 +131,12 @@ useEffect(() => {
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
-    fetch(`${API_BASE_URL}/api/user/${storedUser.id}`)
-      .then((res) => res.json()) // parse JSON
+    // console.log("Stored user from localStorage:", storedUser);
+    userDetails(storedUser.id)
+      // fetch(`${API_BASE_URL}/api/user/${storedUser.id}`)
+      // .then((res) => res.json()) // parse JSON
       .then((data) => {
+        console.log("Fetched user data:", data);
         if (data?.user?.profileImage?.cloudinaryUrl) {
           setProfileImage(data?.user?.profileImage?.cloudinaryUrl);
         }
@@ -141,18 +145,18 @@ useEffect(() => {
         console.error("Error fetching user:", err);
       })
 
-     
-      socket.emit("joinUserRoom", storedUser.id);
-      
-      socket.on("UserprofileImageUpdated", (data) => {
-     
+
+    socket.emit("joinUserRoom", storedUser.id);
+
+    socket.on("UserprofileImageUpdated", (data) => {
+
 
       if (data.userId === storedUser.id) {
         const newImage = data.profileImage.cloudinaryUrl || data.profileImage;
 
         setProfileImage(newImage);
 
-       
+
         const updatedUser = {
           ...storedUser,
           profileImage: { cloudinaryUrl: newImage },
@@ -161,7 +165,7 @@ useEffect(() => {
       }
     });
 
-   
+
     return () => {
       socket.off("UserprofileImageUpdated");
     };
@@ -169,30 +173,40 @@ useEffect(() => {
   }, []);
 
   // --- Fetch notifications
-const fetchNotifications = async () => {
-  try {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    const storedRole = localStorage.getItem("role"); // 'user' or 'doctor'
-    const userId = storedUser?.id;
+  const fetchNotifications = async () => {
+    try {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      const storedRole = localStorage.getItem("role"); // 'user' or 'doctor'
+      const userId = storedUser?.id;
 
-    if (!userId || !storedRole) {
-      console.warn("No userId or role found in localStorage — skipping fetch.");
-      return;
+      if (!userId || !storedRole) {
+        console.warn("No userId or role found in localStorage — skipping fetch.");
+        return;
+      }
+
+      const res = await fetch(
+        `${API_BASE_URL}/api/notifications/${storedRole}/${userId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      if (res.ok && Array.isArray(data.notifications)) {
+        setNotifications(data.notifications);
+        console.log("Fetched notifications:", data.notifications.length);
+      } else {
+        console.error("Failed to fetch notifications:", data.message);
+      }
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
     }
-
-    const res = await fetch(`${API_BASE_URL}/api/notifications/${storedRole}/${userId}`);
-    const data = await res.json();
-
-    if (res.ok && Array.isArray(data.notifications)) {
-      setNotifications(data.notifications);
-      console.log("Fetched notifications:", data.notifications.length);
-    } else {
-      console.error("Failed to fetch notifications:", data.message);
-    }
-  } catch (err) {
-    console.error("Error fetching notifications:", err);
-  }
-};
+  };
 
   // useEffect(() => {
   //   fetchNotifications(); // Initial fetch on mount
@@ -200,103 +214,103 @@ const fetchNotifications = async () => {
 
 
   // --- Real-time notifications via Socket.IO
-useEffect(() => {
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-  const userId = storedUser?.id;
-  if (!userId) return;
-
-  
-
-  const joinRoomAndFetch = () => {
-    socket.emit("joinUser", userId);
-    console.log("Joined user room after connect/reconnect:", userId);
-    fetchNotifications(); // Fetch notifications on connect/reconnect
-  };
-
-  // If socket is already connected, join and fetch immediately
-  if (socket.connected) {
-    joinRoomAndFetch();
-  }
-
-  socket.on("connect", joinRoomAndFetch);
-  socket.on("reconnect", joinRoomAndFetch);
-
-  socket.on("newNotification", (data) => {
-  const messageText =
-    typeof data.message === "string"
-      ? data.message
-      : data.message?.text || "You have a new notification! Please check.";
-
-  // ✅ Show toast safely
-  showToast(messageText, {
-    background: "#00a99d",
-    position: "bottom-right",
-    duration: 5000,
-  });
-
-  // if (messageText.includes("You have a new notification")) {
-  //   return; // STOP here (do not add to dropdown)
-  // }
-
-  // ✅ Normalize data structure for your state
-  const newNotif = {
-    _id: data._id || Date.now(),
-    message: {
-      text: messageText,
-      link: data.message?.link || null,
-    },
-    isRead: false,
-  };
-
-  setNotifications((prev) => [newNotif, ...prev]);
-});
-
- 
-  socket.on("connect_error", (err) => {
-    console.error("Socket connection error:", err.message);
-  });
-
-  return () => {
-    socket.off("newNotification");
-    socket.off("connect_error");
-    socket.off("connect", joinRoomAndFetch);
-    socket.off("reconnect", joinRoomAndFetch);
-  };
-}, []);
-
-useEffect(() => {
-  const timer = setTimeout(() => {
-    fetchNotifications();
-  }, 500); // delay 0.5s
-  return () => clearTimeout(timer);
-}, []);
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    const userId = storedUser?.id;
+    if (!userId) return;
 
 
 
-   // --- Unread count
+    const joinRoomAndFetch = () => {
+      socket.emit("joinUser", userId);
+      console.log("Joined user room after connect/reconnect:", userId);
+      // fetchNotifications(); // Fetch notifications on connect/reconnect
+    };
+
+    // If socket is already connected, join and fetch immediately
+    if (socket.connected) {
+      joinRoomAndFetch();
+    }
+
+    socket.on("connect", joinRoomAndFetch);
+    socket.on("reconnect", joinRoomAndFetch);
+
+    socket.on("newNotification", (data) => {
+      const messageText =
+        typeof data.message === "string"
+          ? data.message
+          : data.message?.text || "You have a new notification! Please check.";
+
+      // ✅ Show toast safely
+      showToast(messageText, {
+        background: "#00a99d",
+        position: "bottom-right",
+        duration: 5000,
+      });
+
+      // if (messageText.includes("You have a new notification")) {
+      //   return; // STOP here (do not add to dropdown)
+      // }
+
+      // ✅ Normalize data structure for your state
+      const newNotif = {
+        _id: data._id || Date.now(),
+        message: {
+          text: messageText,
+          link: data.message?.link || null,
+        },
+        isRead: false,
+      };
+
+      setNotifications((prev) => [newNotif, ...prev]);
+    });
+
+
+    socket.on("connect_error", (err) => {
+      console.error("Socket connection error:", err.message);
+    });
+
+    return () => {
+      socket.off("newNotification");
+      socket.off("connect_error");
+      socket.off("connect", joinRoomAndFetch);
+      socket.off("reconnect", joinRoomAndFetch);
+    };
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // fetchNotifications();
+    }, 500); // delay 0.5s
+    return () => clearTimeout(timer);
+  }, []);
+
+
+
+  // --- Unread count
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-   // --- Mark as read
+  // --- Mark as read
   const handleMarkRead = async (id) => {
-      const role = localStorage.getItem("role"); // 'user' or 'doctor'
+    const role = localStorage.getItem("role"); // 'user' or 'doctor'
 
     try {
-    const res = await fetch(`${API_BASE_URL}/api/notifications/${id}/read?type=${role}`, {
+      const res = await fetch(`${API_BASE_URL}/api/notifications/${id}/read?type=${role}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
       });
-        const data = await res.json();
+      const data = await res.json();
 
       if (res.ok) {
-       console.log(" Marked as read:", data.notification);
+        console.log(" Marked as read:", data.notification);
 
         setNotifications((prev) =>
           prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
         );
-              setExpandedIds((prev) => [...prev, id]);
+        setExpandedIds((prev) => [...prev, id]);
 
-      } else{
-      console.error(" Error:", data.message);
+      } else {
+        console.error(" Error:", data.message);
       }
     } catch (err) {
       console.error("Error marking notification as read:", err);
@@ -322,7 +336,7 @@ useEffect(() => {
       // ✅ Call backend logout API
       const response = await fetch(`${API_BASE_URL}/api/user/logout`, {
         method: "POST",
-        credentials: "include", 
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -500,8 +514,8 @@ useEffect(() => {
                     zIndex: 999,
                     padding: "0px 0px",
                     paddingLeft: "20px",
-                    paddingRight:"20px", 
-                    paddingTop:"5px",                   
+                    paddingRight: "20px",
+                    paddingTop: "5px",
                     overflowY: "auto",
                     boxShadow: "2px 0 8px rgba(0, 0, 0, 0.1)",
                     transition:
@@ -602,221 +616,221 @@ useEffect(() => {
           title="Logout"
         />
 
-{/*  Notification Bell */}
-<div style={{ position: "relative", marginRight: "15px" }} ref={dropdownRef}>
-  <img
-    src={notification}
-    alt="Notification"
-    style={{ width: '22px', height: '22px', cursor: "pointer" }}
-    onClick={() => setShowDropdown((prev) => !prev)}
-  />
+        {/*  Notification Bell */}
+        <div style={{ position: "relative", marginRight: "15px" }} ref={dropdownRef}>
+          <img
+            src={notification}
+            alt="Notification"
+            style={{ width: '22px', height: '22px', cursor: "pointer" }}
+            onClick={() => setShowDropdown((prev) => !prev)}
+          />
 
-  {/*  Unread Count Badge */}
-  {unreadCount > 0 && (
-    <span
-      style={{
-        position: "absolute",
-        top: "-5px",
-        right: "-5px",
-        background: "red",
-        color: "white",
-        borderRadius: "50%",
-        fontSize: "10px",
-        width: "16px",
-        height: "16px",
-        textAlign: "center",
-        lineHeight: "16px",
-      }}
-    >
-      {unreadCount}
-    </span>
-  )}
+          {/*  Unread Count Badge */}
+          {unreadCount > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: "-5px",
+                right: "-5px",
+                background: "red",
+                color: "white",
+                borderRadius: "50%",
+                fontSize: "10px",
+                width: "16px",
+                height: "16px",
+                textAlign: "center",
+                lineHeight: "16px",
+              }}
+            >
+              {unreadCount}
+            </span>
+          )}
 
-  {/* Dropdown */}
-{showDropdown && (
-  <div
-    className="notification-dropdown"
-    // ref={dropdownRef}
-    style={{
-      position: "absolute",
-      top: "30px",
-      right: "0",
-      background: "#fff",
-      border: "1px solid #ddd",
-      borderRadius: "10px",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-      zIndex: 2000,
-      overflow: "hidden", // Prevent header from scrolling
-    }}
-  >
-    {/* --- HEADER (Fixed) --- */}
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "10px",
-        borderBottom: "1px solid #eee",
-        position: "sticky",
-        top: 0,
-        background: "#fff",
-        zIndex: 10,
-      }}
-    >
-      <strong>Notifications</strong>
-      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-        <button
-          onClick={async () => {
-            const role = localStorage.getItem("role");
-            const user = JSON.parse(localStorage.getItem("user"));
-            const id = user?.id;
-            if (!id || !role) return;
+          {/* Dropdown */}
+          {showDropdown && (
+            <div
+              className="notification-dropdown"
+              // ref={dropdownRef}
+              style={{
+                position: "absolute",
+                top: "30px",
+                right: "0",
+                background: "#fff",
+                border: "1px solid #ddd",
+                borderRadius: "10px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                zIndex: 2000,
+                overflow: "hidden", // Prevent header from scrolling
+              }}
+            >
+              {/* --- HEADER (Fixed) --- */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "10px",
+                  borderBottom: "1px solid #eee",
+                  position: "sticky",
+                  top: 0,
+                  background: "#fff",
+                  zIndex: 10,
+                }}
+              >
+                <strong>Notifications</strong>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <button
+                    onClick={async () => {
+                      const role = localStorage.getItem("role");
+                      const user = JSON.parse(localStorage.getItem("user"));
+                      const id = user?.id;
+                      if (!id || !role) return;
 
-            try {
-              const res = await fetch(
-                `${API_BASE_URL}/api/notifications/mark-all-read?type=${role}`,
-                {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    userId: role === "user" ? id : undefined,
-                    doctorId: role === "doctor" ? id : undefined,
-                  }),
-                }
-              );
-              if (res.ok) {
-                setNotifications((prev) =>
-                  prev.map((n) => ({ ...n, isRead: true }))
-                );
-              }
-            } catch (err) {
-              console.error("Error marking all read:", err);
-            }
-          }}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#007bff",
-            fontSize: "13px",
-            cursor: "pointer",
-          }}
-        >
-          Mark all as read
-        </button>
-        <span
-          onClick={() => setShowDropdown(false)}
-          style={{
-            cursor: "pointer",
-            color: "#555",
-            fontSize: "16px",
-            marginRight: "5px",
-          }}
-        >
-          ✕
-        </span>
-      </div>
-    </div>
-
-    {/* --- SCROLLABLE LIST --- */}
-    <div
-      className="notification-list"
-      style={{
-        maxHeight: "300px",
-        overflowY: "auto",
-        scrollbarWidth: "none", // Firefox
-      }}
-    >
-      {notifications.length > 0 ? (
-        notifications.map((note) => (
-          <div
-            key={note._id}
-            style={{
-              backgroundColor: note.isRead ? "#f9f9f9" : "#00a99d", // ✨ Change unread color here
-              padding: "10px",
-              borderRadius: "8px",
-              margin: "8px 10px",
-              border: "1px solid #eee",
-            }}
-          >
-            <p style={{ margin: 0, fontSize: "14px", color: "#333" }}>
-              {expandedIds.includes(note._id) ? (
-                <>
-                  {note.message.text}{" "}
-                  {note.message.link && (
-          <a
-            href={note.message.link}
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(note.message.link);
-            }}
-            style={{ color: "#00A99D", textDecoration: "underline",marginRight:"10px" }}
-          >
-            Click here 
-          </a>
-        )}
-                  <span
-                    onClick={() =>
-                      setExpandedIds((prev) =>
-                        prev.filter((id) => id !== note._id)
-                      )
-                    }
-                    style={{ color: "#007bff", cursor: "pointer" }}
+                      try {
+                        const res = await fetch(
+                          `${API_BASE_URL}/api/notifications/mark-all-read?type=${role}`,
+                          {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              userId: role === "user" ? id : undefined,
+                              doctorId: role === "doctor" ? id : undefined,
+                            }),
+                          }
+                        );
+                        if (res.ok) {
+                          setNotifications((prev) =>
+                            prev.map((n) => ({ ...n, isRead: true }))
+                          );
+                        }
+                      } catch (err) {
+                        console.error("Error marking all read:", err);
+                      }
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#007bff",
+                      fontSize: "13px",
+                      cursor: "pointer",
+                    }}
                   >
-                    less
-                  </span>
-                </>
-              ) : note.message.text.length > 40 ? (
-                <>
-                  {note.message.text.slice(0, 40)}...
+                    Mark all as read
+                  </button>
                   <span
-                    onClick={() => handleMarkRead(note._id)}
-                    style={{ color: "#007bff", cursor: "pointer" }}
+                    onClick={() => setShowDropdown(false)}
+                    style={{
+                      cursor: "pointer",
+                      color: "#555",
+                      fontSize: "16px",
+                      marginRight: "5px",
+                    }}
                   >
-                    more
+                    ✕
                   </span>
-                </>
-              ) : (
-                 <>
-        {note.message.text}{" "}
-        {note.message.link && (
-          <a
-  href={note.message.link}
-  onClick={(e) => {
-    e.preventDefault(); // stop browser reload
-    e.stopPropagation();
+                </div>
+              </div>
 
-    const link = note.message.link || "";
+              {/* --- SCROLLABLE LIST --- */}
+              <div
+                className="notification-list"
+                style={{
+                  maxHeight: "300px",
+                  overflowY: "auto",
+                  scrollbarWidth: "none", // Firefox
+                }}
+              >
+                {notifications.length > 0 ? (
+                  notifications.map((note) => (
+                    <div
+                      key={note._id}
+                      style={{
+                        backgroundColor: note.isRead ? "#f9f9f9" : "#00a99d", // ✨ Change unread color here
+                        padding: "10px",
+                        borderRadius: "8px",
+                        margin: "8px 10px",
+                        border: "1px solid #eee",
+                      }}
+                    >
+                      <p style={{ margin: 0, fontSize: "14px", color: "#333" }}>
+                        {expandedIds.includes(note._id) ? (
+                          <>
+                            {note.message.text}{" "}
+                            {note.message.link && (
+                              <a
+                                href={note.message.link}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(note.message.link);
+                                }}
+                                style={{ color: "#00A99D", textDecoration: "underline", marginRight: "10px" }}
+                              >
+                                Click here
+                              </a>
+                            )}
+                            <span
+                              onClick={() =>
+                                setExpandedIds((prev) =>
+                                  prev.filter((id) => id !== note._id)
+                                )
+                              }
+                              style={{ color: "#007bff", cursor: "pointer" }}
+                            >
+                              less
+                            </span>
+                          </>
+                        ) : note.message.text.length > 40 ? (
+                          <>
+                            {note.message.text.slice(0, 40)}...
+                            <span
+                              onClick={() => handleMarkRead(note._id)}
+                              style={{ color: "#007bff", cursor: "pointer" }}
+                            >
+                              more
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            {note.message.text}{" "}
+                            {note.message.link && (
+                              <a
+                                href={note.message.link}
+                                onClick={(e) => {
+                                  e.preventDefault(); // stop browser reload
+                                  e.stopPropagation();
 
-    // ✅ Handle absolute and relative links safely
-    if (link.startsWith("http")) {
-      const url = new URL(link);
-      navigate(url.pathname); // only navigate to path part
-    } else {
-      navigate(link); // relative path
-    }
-  }}
-  style={{ color: "#00A99D", textDecoration: "underline" }}
->
-  Click here ...
-</a>
+                                  const link = note.message.link || "";
 
-        )}
-      </>
-              )}
-            </p>
-          </div>
-        ))
-      ) : (
-        <p style={{ textAlign: "center", color: "#888", padding: "10px" }}>
-          No notifications
-        </p>
-      )}
-    </div>
-  </div>
-)}
-</div>
+                                  // ✅ Handle absolute and relative links safely
+                                  if (link.startsWith("http")) {
+                                    const url = new URL(link);
+                                    navigate(url.pathname); // only navigate to path part
+                                  } else {
+                                    navigate(link); // relative path
+                                  }
+                                }}
+                                style={{ color: "#00A99D", textDecoration: "underline" }}
+                              >
+                                Click here ...
+                              </a>
 
-         {/* Profile Image */}
+                            )}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ textAlign: "center", color: "#888", padding: "10px" }}>
+                    No notifications
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Profile Image */}
 
         <img
           src={profileImage}

@@ -4,7 +4,8 @@ import getCroppedImg from "./CropImage"
 import { API_BASE_URL } from "../../../api-config";
 import { toast } from "react-toastify";
 import LoaderOverlay from "../../../commonComponents/FadeLoader";
-import { Button } from "@mui/material"; 
+import { Button } from "@mui/material";
+import { userDetails } from "../../../Util/apiRequest";
 
 const ProfileImageCropper = () => {
   const [profileImage, setProfileImage] = useState();
@@ -14,26 +15,27 @@ const ProfileImageCropper = () => {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [showCropper, setShowCropper] = useState(false);
   const fileInputRef = useRef(null);
-   const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const calculateAge = (dob) => {
     if (!dob) return "";
     const birthDate = new Date(dob);
-    if (isNaN(birthDate)) return ""; 
+    if (isNaN(birthDate)) return "";
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--; 
+      age--;
     }
     return age;
   };
-  
+
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (!storedUser?.id) return;
 
-    fetch(`${API_BASE_URL}/api/user/${storedUser.id}`)
-      .then((res) => res.json())
+    userDetails(storedUser.id)
+      // fetch(`${API_BASE_URL}/api/user/${storedUser.id}`)
+      //   .then((res) => res.json())
       .then((data) => {
         if (data?.user) {
           const calculatedAge = calculateAge(data.user.dob);
@@ -46,7 +48,7 @@ const ProfileImageCropper = () => {
         }
       })
       .catch((err) => console.error("Error fetching user:", err))
-    .finally(() => setLoading(false));
+      .finally(() => setLoading(false));
   }, []);
 
   const handleImageClick = () => fileInputRef.current?.click();
@@ -69,14 +71,14 @@ const ProfileImageCropper = () => {
   const handleSave = async () => {
     try {
       const croppedImage = await getCroppedImg(selectedImage, croppedAreaPixels);
-    
+
       const response = await fetch(croppedImage);
       const blob = await response.blob();
       const file = new File([blob], "cropped_profile.jpg", { type: blob.type });
 
       const storedUser = JSON.parse(localStorage.getItem("user"));
       const formDataObj = new FormData();
-      formDataObj.append("profileImage", file); 
+      formDataObj.append("profileImage", file);
 
       try {
         setLoading(true);
@@ -85,13 +87,14 @@ const ProfileImageCropper = () => {
           {
             method: "PUT",
             body: formDataObj,
+            "authorization": `Bearer ${localStorage.getItem("authToken")}`
           }
         );
 
         if (!res.ok) throw new Error("Failed to upload image");
 
         const data = await res.json();
-        setProfileImage(data.imageUrl); 
+        setProfileImage(data.imageUrl);
 
         const updatedUser = {
           ...storedUser,
@@ -118,123 +121,123 @@ const ProfileImageCropper = () => {
     setShowCropper(false);
     setSelectedImage(null);
   };
- if (loading) return <LoaderOverlay loading={true} />;
+  if (loading) return <LoaderOverlay loading={true} />;
   return (
     <>
-     <LoaderOverlay loading={loading} />
-    <div className="d-flex justify-content-center align-items-center">
-      <div
-        className="rounded-circle border d-flex align-items-center justify-content-center"
-        style={{ width: 72, height: 72 }}
-      >
+      <LoaderOverlay loading={loading} />
+      <div className="d-flex justify-content-center align-items-center">
         <div
-          style={{
-            position: "relative",
-            width: "72px",
-            height: "72px",
-            borderRadius: "50%",
-            overflow: "hidden",
-          }}
-        >
-          <img
-            src={profileImage}
-            alt="Profile Icon"
-            width={72}
-            height={72}
-            style={{ display: "block", objectFit: "cover" }}
-          />
-
-          <div
-            onClick={handleImageClick}
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              width: "100%",
-              height: "50%",
-              backgroundColor: "rgba(0, 0, 0, 0.2)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "10px",
-              color: "#fff",
-              fontWeight: "500",
-              textDecoration: "underline",
-              cursor: "pointer",
-            }}
-          >
-            Change photo
-          </div>
-
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-            style={{ display: "none" }}
-          />
-        </div>
-      </div>
-
-      {showCropper && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            backgroundColor: "rgba(0, 0, 0, 0.7)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 1000,
-          }}
+          className="rounded-circle border d-flex align-items-center justify-content-center"
+          style={{ width: 72, height: 72 }}
         >
           <div
             style={{
               position: "relative",
-              width: "300px",
-              height: "300px",
-              background: "#333",
+              width: "72px",
+              height: "72px",
+              borderRadius: "50%",
+              overflow: "hidden",
             }}
           >
-            <Cropper
-              image={selectedImage}
-              crop={crop}
-              zoom={zoom}
-              aspect={1}
-              onCropChange={setCrop}
-              onCropComplete={onCropComplete}
-              onZoomChange={setZoom}
+            <img
+              src={profileImage}
+              alt="Profile Icon"
+              width={72}
+              height={72}
+              style={{ display: "block", objectFit: "cover" }}
+            />
+
+            <div
+              onClick={handleImageClick}
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                width: "100%",
+                height: "50%",
+                backgroundColor: "rgba(0, 0, 0, 0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "10px",
+                color: "#fff",
+                fontWeight: "500",
+                textDecoration: "underline",
+                cursor: "pointer",
+              }}
+            >
+              Change photo
+            </div>
+
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={handleImageChange}
+              style={{ display: "none" }}
             />
           </div>
-          <input
-            type="range"
-            min={1}
-            max={3}
-            step={0.1}
-            value={zoom}
-            onChange={(e) => setZoom(e.target.value)}
-            style={{
-              width: "50%",
-              marginTop: 16,
-              cursor: "pointer",
-            }}
-          />
-
-          <div style={{ marginTop: "16px", display: "flex", gap: "12px" }}>
-            <Button variant="contained" color="primary" onClick={handleSave}>
-              Save
-            </Button>
-            <Button variant="outlined" color="secondary" onClick={handleCancel}>
-              Cancel
-            </Button>
-          </div>
         </div>
-      )}
-    </div>
+
+        {showCropper && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+              backgroundColor: "rgba(0, 0, 0, 0.7)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 1000,
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                width: "300px",
+                height: "300px",
+                background: "#333",
+              }}
+            >
+              <Cropper
+                image={selectedImage}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onCropComplete={onCropComplete}
+                onZoomChange={setZoom}
+              />
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.1}
+              value={zoom}
+              onChange={(e) => setZoom(e.target.value)}
+              style={{
+                width: "50%",
+                marginTop: 16,
+                cursor: "pointer",
+              }}
+            />
+
+            <div style={{ marginTop: "16px", display: "flex", gap: "12px" }}>
+              <Button variant="contained" color="primary" onClick={handleSave}>
+                Save
+              </Button>
+              <Button variant="outlined" color="secondary" onClick={handleCancel}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </>
 
   );
