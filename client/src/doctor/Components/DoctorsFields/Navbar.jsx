@@ -23,7 +23,7 @@ const Navbar = () => {
       <img src={Logo} alt="Logo" className="w-16 h-auto" />
 
       {/* Right Section: Icons */}
-      <div className="flex items-center gap-4 mr-[40px]">
+      <div className="flex items-center gap-4 mr-[0px]">
         <button className="p-1 bg-transparent border-none">
           <Bell className="w-6 h-6" />
         </button>

@@ -370,7 +370,7 @@ function DBoard() {
 
         // Make sure data.doctors exists and is an array
         if (Array.isArray(data.doctors)) {
-          setDoctors(data.doctors.slice(0, 25)); // ✅ Get top 3 doctors
+          setDoctors(data.doctors); // ✅ Get top 3 doctors .slice(0, 25)
           console.log(doctors)
         } else {
           setDoctors([]); // fallback
@@ -474,7 +474,7 @@ function DBoard() {
           // minHeight: "100vh",
         }}>
 
-          <div className={`container max-w-7xl mt-5 pt-6 space-y-6`}>
+          <div className={`container max-w-7xl mt-4 pt-6 space-y-6`}>
             <div className="grid grid-cols-[1fr] justify-between items-center">
               <div className={`${styles.dboardContainer}`} style={{ marginTop: "1rem" }} >
                 <h1 className="dboard-header font-urbanist font-bold text-[24px] leading-[120%] text-[#013A63]">

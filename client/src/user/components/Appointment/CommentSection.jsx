@@ -437,7 +437,7 @@ function normalizeReviewToComment(review) {
   };
 }
 
-function CommentSection({ doctorId, userId, role = "user" }) {
+function CommentSection({ doctorId, userId, role = "user", duplicateComments }) {
 
   const storedUser = JSON.parse(localStorage.getItem("user"));
   const currentUser = {
@@ -450,45 +450,59 @@ function CommentSection({ doctorId, userId, role = "user" }) {
   const [newCommentText, setNewCommentText] = useState('');
   const [loading, setLoading] = useState(false);
   const [run, setRun] = useState(false);
+  // console.log(duplicateComments);
+  // console.log(comments)
 
   useEffect(() => {
-    if (!doctorId) return;
-    setLoading(true);
-    let authToken = localStorage.getItem("authToken");
-    fetch(`${API_BASE_URL}/api/reviews?doctorId=${doctorId}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${authToken}`
-        }
-      }
-    )
-      .then((res) => res.json())
-      .then((payload) => {
-        const reviews = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
-        const mapped = reviews
-          .filter((r) => !r?.isDeleted)
-          .map((r) => normalizeReviewToComment(r))
-          .sort((a, b) => {
-            const ta = a.raw?.createdAt ? new Date(a.raw.createdAt).getTime() : 0;
-            const tb = b.raw?.createdAt ? new Date(b.raw.createdAt).getTime() : 0;
-            return tb - ta;
-          });
+    // if (role === "doctor") {
+    //   setComments(duplicateComments);
+    // }
 
-        setComments(mapped);
-        const myReview = reviews.find((r) => String(r?.user?._id) === String(userId) || String(r?.user?._id) === String(userId));
-        if (myReview && typeof myReview.rating === 'number') {
-          setRatingValue(myReview.rating);
-        } else {
-          setRatingValue(0);
+    // console.log(duplicateComments)
+    // setComments(duplicateComments)
+    // return;
+
+    if (!doctorId) return;
+    if (role === 'user') {
+
+      setLoading(true);
+      let authToken = localStorage.getItem("authToken");
+      fetch(`${API_BASE_URL}/api/reviews?doctorId=${doctorId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${authToken}`
+          }
         }
-      })
-      .catch((err) => {
-        console.error('Failed to fetch reviews:', err);
-        toast.error('Failed to load reviews');
-      })
-      .finally(() => setLoading(false));
+      )
+        .then((res) => res.json())
+        .then((payload) => {
+          const reviews = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
+          const mapped = reviews
+            .filter((r) => !r?.isDeleted)
+            .map((r) => normalizeReviewToComment(r))
+            .sort((a, b) => {
+              const ta = a.raw?.createdAt ? new Date(a.raw.createdAt).getTime() : 0;
+              const tb = b.raw?.createdAt ? new Date(b.raw.createdAt).getTime() : 0;
+              return tb - ta;
+            });
+
+          setComments(mapped);
+          const myReview = reviews.find((r) => String(r?.user?._id) === String(userId) || String(r?.user?._id) === String(userId));
+          if (myReview && typeof myReview.rating === 'number') {
+            setRatingValue(myReview.rating);
+          } else {
+            setRatingValue(0);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch reviews:', err);
+          toast.error('Failed to load reviews');
+        })
+        .finally(() => setLoading(false));
+    }
+
   }, [doctorId, userId, run]);
 
   const handleAddComment = async (e) => {
@@ -729,28 +743,58 @@ function CommentSection({ doctorId, userId, role = "user" }) {
 
         <Box sx={{ width: '100%', mt: 2 }}>
           {loading && <Typography variant="body2">Loading comments...</Typography>}
+          {role === 'doctor' && (
+            <>
+              {duplicateComments?.map((comment) => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  currentUser={currentUser}
+                  onEdit={handleEditComment}
+                  onReply={handleAddReply}
+                  onToggleLike={handleToggleLike}
+                  onToggleDislike={handleToggleDislike}
+                  onToggleLikeReply={handleToggleLikeReply}
+                  onToggleDislikeReply={handleToggleDislikeReply}
+                  role={role}
+                // onToggleReply={handleReply}
+                />
+              ))}
 
-          {comments.map((comment) => (
-            <CommentItem
-              key={comment.id}
-              comment={comment}
-              currentUser={currentUser}
-              onEdit={handleEditComment}
-              onReply={handleAddReply}
-              onToggleLike={handleToggleLike}
-              onToggleDislike={handleToggleDislike}
-              onToggleLikeReply={handleToggleLikeReply}
-              onToggleDislikeReply={handleToggleDislikeReply}
-              role={role}
-            // onToggleReply={handleReply}
-            />
-          ))}
+              {duplicateComments.length === 0 && !loading && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  No reviews yet. Be the first to leave a rating and comment!
+                </Typography>
+              )}
 
-          {comments.length === 0 && !loading && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              No reviews yet. Be the first to leave a rating and comment!
-            </Typography>
+
+            </>
           )}
+          {role === 'user' && (
+            <>
+              {comments?.map((comment) => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  currentUser={currentUser}
+                  onEdit={handleEditComment}
+                  onReply={handleAddReply}
+                  onToggleLike={handleToggleLike}
+                  onToggleDislike={handleToggleDislike}
+                  onToggleLikeReply={handleToggleLikeReply}
+                  onToggleDislikeReply={handleToggleDislikeReply}
+                  role={role}
+                />
+              ))}
+
+              {comments.length === 0 && !loading && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  No reviews yet. Be the first to leave a rating and comment!
+                </Typography>
+              )}
+            </>
+          )}
+
         </Box>
       </Box>
     </>
@@ -905,7 +949,7 @@ function CommentItem({ comment, currentUser, onEdit, onReply, onToggleLike, onTo
               transformOrigin={{ vertical: "top", horizontal: "right" }}
             >
               <MenuItem onClick={() => setOpenReport(true)}>Report</MenuItem>
-              {role === 'doctor' && <MenuItem onClick={()=>handleDeleteComment(comment)} >Delete</MenuItem>}
+              {role === 'doctor' && <MenuItem onClick={() => handleDeleteComment(comment)} >Delete</MenuItem>}
             </Menu>
 
             {reportOpen && (

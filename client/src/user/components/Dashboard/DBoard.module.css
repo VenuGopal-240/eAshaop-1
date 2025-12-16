@@ -1,4 +1,4 @@
-
+dboardContainer
 .customBorder {
   border-right: 1px solid #f3f4f6;
   
@@ -142,7 +142,7 @@
 
   .dboardContainer {
     margin-top: -0.5rem !important;
-    margin-left: 2rem; 
+    /* margin-left: 2rem;  */
   }
 
   .dashBtn {
